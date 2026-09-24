@@ -5,29 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Прыжки — рабочая версия игры</title>
   <style>
-    :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #17314d; background: #eaf5fb; }
+    :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #17314d; background: #16344c; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px; }
-    .shell { max-width: 1060px; margin: 0 auto; }
-    .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
-    h1 { font-size: clamp(22px, 3vw, 34px); margin: 0; }
-    .hint { margin: 5px 0 0; color: #526b7c; }
-    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .controls button { border: 1px solid #9dbdcf; background: white; color: #17314d; padding: 9px 13px; border-radius: 12px; font: inherit; cursor: pointer; }
+    html, body { width: 100%; height: 100%; }
+    body { margin: 0; display: grid; place-items: center; overflow: hidden; }
+    .shell { width: min(100vw, 177.7778dvh); aspect-ratio: 16 / 9; }
+    .top { position: absolute; top: 2%; left: 3%; right: 3%; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; gap: 1%; }
+    h1 { font-size: clamp(12px, 2.8cqw, 34px); margin: 0; }
+    .hint { margin: .2cqw 0 0; font-size: clamp(8px, 1.35cqw, 16px); color: #526b7c; }
+    .controls { display: flex; gap: .7cqw; align-items: center; }
+    .controls button { border: 1px solid #9dbdcf; background: white; color: #17314d; padding: .6cqw 1cqw; border-radius: 1.2cqw; font-size: clamp(8px, 1.25cqw, 16px); white-space: nowrap; cursor: pointer; }
     .controls button[aria-pressed="true"] { background: #1c608e; color: white; border-color: #1c608e; }
     .controls button:focus-visible, .answer:focus-visible { outline: 3px solid #e79c2f; outline-offset: 3px; }
-    .board { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 22px; isolation: isolate; background: linear-gradient(#c8eafa 0%, #e9f9ff 61%, #83c2dd 62%, #559fca 100%); box-shadow: 0 15px 50px #37749b32; }
+    .sound-status { position: absolute; left: 3%; bottom: 2%; z-index: 11; max-width: 65%; padding: .5cqw 1cqw; border-radius: 1cqw; background: #fffdf1; font-size: clamp(9px, 1.25cqw, 16px); box-shadow: 0 .3cqw 1cqw #17314d55; }
+    .sound-status:empty { display: none; }
+    .board { position: relative; width: 100%; height: 100%; container-type: inline-size; overflow: hidden; isolation: isolate; background: linear-gradient(#c8eafa 0%, #e9f9ff 61%, #83c2dd 62%, #559fca 100%); }
     .board::before { content: ""; position: absolute; inset: 7% 0 auto; height: 32%; background: radial-gradient(ellipse at 20% 80%, #fff9 0 8%, transparent 8.5%), radial-gradient(ellipse at 80% 10%, #fff9 0 10%, transparent 10.5%); opacity: .65; pointer-events: none; }
-    .instruction { position: absolute; left: 4%; top: 4%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 16px; font-size: clamp(12px, 2.2vw, 24px); font-weight: 720; }
-    .count { position: absolute; right: 4%; top: 5%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 14px; font-size: clamp(11px, 1.65vw, 18px); }
-    .answer, .start, .finish { position: absolute; width: 12%; height: 15%; border-radius: 50% 50% 35% 35%; border: 0; background: #efffff; box-shadow: 0 7px 0 #a8d8e6, 0 12px 17px #194a7550; display: grid; place-items: center; font-size: clamp(15px, 3.2vw, 38px); font-weight: 800; color: #17466c; }
+    .instruction { position: absolute; left: 4%; top: 15%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 1.5cqw; font-size: clamp(10px, 2.2cqw, 24px); font-weight: 720; }
+    .count { position: absolute; right: 4%; top: 16%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 1.3cqw; font-size: clamp(9px, 1.65cqw, 18px); }
+    .answer, .start, .finish { position: absolute; width: 12%; height: 15%; border-radius: 50% 50% 35% 35%; border: 0; background: #efffff; box-shadow: 0 .7cqw 0 #a8d8e6, 0 1.2cqw 1.7cqw #194a7550; display: grid; place-items: center; font-size: clamp(12px, 3.2cqw, 42px); font-weight: 800; color: #17466c; }
     .answer { cursor: pointer; touch-action: manipulation; }
     .answer:hover:not(.is-found):not(.is-locked) { background: #fff8d6; }
     .answer.is-found { background: #c9f5e1; color: #22634d; cursor: default; }
+    .answer.is-correct-pop { animation: correct-pop .55s ease-out; }
     .answer.is-locked { opacity: .55; cursor: default; }
     .start, .finish { pointer-events: none; }
     .start { left: 5%; top: 69%; width: 13%; }
-    .finish { left: 82%; top: 67%; width: 14%; font-size: clamp(20px, 3.6vw, 45px); }
+    .finish { left: 82%; top: 67%; width: 14%; font-size: clamp(16px, 3.6cqw, 48px); }
     .finish.is-finished { animation: finish-pulse .75s ease-in-out 3; }
     @keyframes finish-pulse { 50% { filter: drop-shadow(0 0 20px #f9bd22); transform: scale(1.12); } }
     #answer-1 { left: 24%; top: 54%; }
@@ -38,27 +42,31 @@
     #wrong-2 { left: 52%; top: 23%; }
     #wrong-3 { left: 66%; top: 72%; }
     .jump-overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-    .character { position: absolute; left: 0; top: 0; width: 8%; height: 15%; display: grid; place-items: center; font-size: clamp(28px, 5vw, 65px); line-height: 1; will-change: transform; filter: drop-shadow(2px 5px 3px #17466c50); }
-    .jump-message { position: absolute; left: 50%; top: 48%; z-index: 10; transform: translate(-50%, -50%); background: #fffdf1; padding: 2.5% 5%; border-radius: 20px; box-shadow: 0 10px 35px #234a6870; text-align: center; font-size: clamp(18px, 3vw, 34px); font-weight: 800; pointer-events: none; max-width: 80%; }
+    .character { position: absolute; left: 0; top: 0; width: 8%; height: 15%; display: grid; place-items: center; font-size: clamp(20px, 5cqw, 65px); line-height: 1; will-change: transform; filter: drop-shadow(2px 5px 3px #17466c50); }
+    .jump-message { position: absolute; left: 50%; top: 48%; z-index: 10; transform: translate(-50%, -50%); background: #fffdf1; padding: 2.5% 5%; border-radius: 2cqw; box-shadow: 0 1cqw 3.5cqw #234a6870; text-align: center; font-size: clamp(15px, 3cqw, 34px); font-weight: 800; pointer-events: none; max-width: 80%; }
+    @keyframes correct-pop { 0% { filter: brightness(1); } 40% { filter: brightness(1.25) drop-shadow(0 0 1.6cqw #f9cc38); } 100% { filter: brightness(1); } }
     .is-wrong-shake { animation: wrong-shake .35s ease-in-out; }
     .is-wrong-glow { animation: wrong-glow .5s ease-out; }
-    @keyframes wrong-shake { 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+    @keyframes wrong-shake { 25% { transform: translateX(-.5cqw); background: #ffcfcb; } 50% { transform: translateX(.5cqw); background: #ffcfcb; } 75% { transform: translateX(-.3cqw); } }
     @keyframes wrong-glow { 40% { box-shadow: 0 0 0 8px #f28b8899, 0 7px 0 #a8d8e6; } }
-    .note { font-size: 14px; color: #526b7c; margin-top: 14px; line-height: 1.5; }
-    @media (max-width: 600px) { body { padding: 9px; } .board { border-radius: 12px; } .instruction { max-width: 66%; } .answer, .start, .finish { height: 18%; } .character { height: 18%; } }
+    @media (max-width: 600px) { .hint { max-width: 45vw; } .controls button { padding: .5cqw .7cqw; } }
   </style>
 </head>
 <body>
 <main class="shell">
-  <div class="top">
-    <div><h1>Прыжки 🐧</h1><p class="hint" id="mode-hint">Нажми на все числа, кратные 6. Порядок любой.</p></div>
-    <div class="controls">
-      <button id="free-mode" type="button" aria-pressed="true">Свободный выбор</button>
-      <button id="route-mode" type="button" aria-pressed="false">Маршрут</button>
-      <button id="reset-game" type="button">↺ Начать заново</button>
-    </div>
-  </div>
   <section id="game-board" class="board" aria-label="Игра: прыжки по ответам">
+    <div class="top">
+      <div>
+        <h1>Прыжки 🐧</h1>
+        <p class="hint" id="mode-hint">Нажми на все числа, кратные 6. Порядок любой.</p>
+      </div>
+      <div class="controls">
+        <button id="free-mode" type="button" aria-pressed="true">Свободный выбор</button>
+        <button id="route-mode" type="button" aria-pressed="false">Маршрут</button>
+        <button id="reset-game" type="button">↺ Начать заново</button>
+        <button id="test-sound" type="button" title="Проверить звук" aria-label="Проверить звук">🔊</button>
+      </div>
+    </div>
     <div class="instruction" id="instruction">Найди числа, кратные 6</div>
     <div class="count" id="progress" aria-live="polite">Найдено: 0/4</div>
     <div id="start" class="start" aria-label="Старт">Старт</div>
@@ -71,31 +79,37 @@
     <button id="wrong-3" class="answer" type="button">32</button>
     <div id="finish" class="finish" aria-label="Финиш">🎁</div>
     <div id="hero" class="character" aria-label="Пингвин">🐧</div>
+    <div id="sound-status" class="sound-status" role="status" aria-live="polite"></div>
   </section>
-  <p class="note">В режиме «Маршрут» нажимай 12 → 18 → 24 → 30. Во время прыжка выбор временно отключён. Демонстрация работает без сервера и внешних библиотек.</p>
 </main>
 <script>
-/* Прыжки, v0.1. Вся будущая панель редактора сможет записывать объект CONFIG ниже.
-   Селекторы относятся к ЭТОМУ же документу и к rootSelector, не к соседнему iframe. */
+/* Селекторы относятся к элементам этого документа. */
 (function () {
   'use strict';
+
   const DEFAULTS = {
-    mode: 'free',                         // 'free' | 'route'
+    mode: 'free',
     rootSelector: '#game-board',
     characterSelector: '#hero',
     startSelector: '#start',
     startLanding: 'above',
-    correctAnswers: [],                   // порядок массива задаёт маршрут
+    correctAnswers: [],
     wrongAnswers: [],
-    finishSelector: null,                 // финиш необязателен
-    landing: 'above',                    // 'center' | 'above' | 'below' | 'left' | 'right'
-    offsetX: 0, offsetY: 0, startOffsetX: 0, startOffsetY: 0,
-    movement: 'jump',                    // 'jump' | 'linear' | 'flight'
-    jumpHeight: 'medium',                // 'low' | 'medium' | 'high' или число (px)
-    duration: 690,                       // миллисекунды, обычно 500–900
-    gap: 3,                              // зазор между персонажем и объектом, px
-    wrongEffect: 'shake',                // 'shake' | 'glow' | 'none'
+    finishSelector: null,
+    landing: 'above',
+    offsetX: 0,
+    offsetY: 0,
+    startOffsetX: 0,
+    startOffsetY: 0,
+    movement: 'jump',
+    jumpHeight: 'medium',
+    duration: 690,
+    gap: 3,
+    wrongEffect: 'shake',
     lockWrong: false,
+    correctEffect: 'pop',
+    soundEnabled: true,
+    correctSoundUrl: null,
     wrongSoundUrl: null,
     finishEffect: true,
     progressSelector: null,
@@ -103,184 +117,512 @@
     onComplete: null,
     onReset: null
   };
+
   const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
   class JumpGame {
     constructor(options) {
       this.config = Object.assign({}, DEFAULTS, options);
-      this.config.completion = Object.assign({}, DEFAULTS.completion, options.completion || {});
+      this.config.completion = Object.assign(
+        {}, DEFAULTS.completion, options.completion || {}
+      );
       this.root = document.querySelector(this.config.rootSelector);
-      if (!this.root) throw new Error('Прыжки: игровой контейнер не найден: ' + this.config.rootSelector);
+      if (!this.root) {
+        throw new Error(
+          'Прыжки: игровой контейнер не найден: ' +
+          this.config.rootSelector
+        );
+      }
+
       this.query = (selector) => {
         if (!selector) return null;
         let el = null;
-        try { el = this.root.querySelector(selector); } catch (e) { /* ID без # */ }
-        if (!el && /^[A-Za-z][\w:-]*$/.test(selector)) el = Array.from(this.root.querySelectorAll('[id]')).find(e => e.id === selector) || null;
+        try {
+          el = this.root.querySelector(selector);
+        } catch (e) { /* Можно указать ID без #. */ }
+        if (!el && /^[A-Za-z][\w:-]*$/.test(selector)) {
+          el = Array.from(this.root.querySelectorAll('[id]'))
+            .find(e => e.id === selector) || null;
+        }
         return el;
       };
+
       this.character = this.query(this.config.characterSelector);
       this.start = this.query(this.config.startSelector);
-      if (!this.character || !this.start) throw new Error('Прыжки: не найден персонаж или стартовая точка');
-      this.correct = this.config.correctAnswers.map(s => this.mustFind(s));
-      this.wrong = this.config.wrongAnswers.map(s => this.mustFind(s));
-      if (!this.correct.length || new Set([...this.correct, ...this.wrong]).size !== this.correct.length + this.wrong.length)
-        throw new Error('Прыжки: нужны правильные ответы без повторов и пересечений');
-      this.finish = this.config.finishSelector ? this.mustFind(this.config.finishSelector) : null;
+      if (!this.character || !this.start) {
+        throw new Error(
+          'Прыжки: не найден персонаж или стартовая точка'
+        );
+      }
+
+      this.correct = this.config.correctAnswers.map(
+        selector => this.mustFind(selector)
+      );
+      this.wrong = this.config.wrongAnswers.map(
+        selector => this.mustFind(selector)
+      );
+      if (!this.correct.length ||
+          new Set([...this.correct, ...this.wrong]).size !==
+          this.correct.length + this.wrong.length) {
+        throw new Error(
+          'Прыжки: нужны правильные ответы без повторов и пересечений'
+        );
+      }
+
+      this.finish = this.config.finishSelector
+        ? this.mustFind(this.config.finishSelector)
+        : null;
       this.progress = this.query(this.config.progressSelector);
-      this.originalCharacterStyle = this.character.getAttribute('style');
+      this.originalCharacterStyle =
+        this.character.getAttribute('style');
       this.originalParent = this.character.parentNode;
       this.originalSibling = this.character.nextSibling;
       this.originalRootPosition = this.root.style.position;
-      if (getComputedStyle(this.root).position === 'static') this.root.style.position = 'relative';
+
+      if (getComputedStyle(this.root).position === 'static') {
+        this.root.style.position = 'relative';
+      }
+
       this.overlay = document.createElement('div');
       this.overlay.className = 'jump-overlay';
       this.root.appendChild(this.overlay);
       this.overlay.appendChild(this.character);
-      Object.assign(this.character.style, {position:'absolute', left:'0', top:'0', margin:'0'});
-      this.originalAria = new Map([...this.correct, ...this.wrong].map(el => [el, el.getAttribute('aria-disabled')]));
-      this.originalDisabled = new Map([...this.correct, ...this.wrong].map(el => [el, 'disabled' in el ? el.disabled : null]));
+      Object.assign(this.character.style, {
+        position: 'absolute',
+        left: '0',
+        top: '0',
+        margin: '0'
+      });
+
+      this.originalAria = new Map(
+        [...this.correct, ...this.wrong].map(
+          el => [el, el.getAttribute('aria-disabled')]
+        )
+      );
+      this.originalDisabled = new Map(
+        [...this.correct, ...this.wrong].map(
+          el => [el, 'disabled' in el ? el.disabled : null]
+        )
+      );
+
       this.boundClick = (event) => {
         let target = event.target;
-        while (target && target !== this.root && !this.correct.includes(target) && !this.wrong.includes(target)) target = target.parentElement;
-        if (this.correct.includes(target)) this.chooseCorrect(target);
-        else if (this.wrong.includes(target)) this.chooseWrong(target);
+        while (
+          target &&
+          target !== this.root &&
+          !this.correct.includes(target) &&
+          !this.wrong.includes(target)
+        ) {
+          target = target.parentElement;
+        }
+        if (this.correct.includes(target)) {
+          this.chooseCorrect(target);
+        } else if (this.wrong.includes(target)) {
+          this.chooseWrong(target);
+        }
       };
-      this.boundResize = () => { if (!this.moving) this.reposition(); };
+
+      this.boundResize = () => {
+        if (!this.moving) this.reposition();
+      };
       this.root.addEventListener('click', this.boundClick);
       window.addEventListener('resize', this.boundResize);
+
       if (typeof ResizeObserver !== 'undefined') {
         this.observer = new ResizeObserver(this.boundResize);
         this.observer.observe(this.root);
       }
+
       this.reset();
     }
 
     mustFind(selector) {
       const el = this.query(selector);
-      if (!el) throw new Error('Прыжки: объект не найден: ' + selector);
+      if (!el) {
+        throw new Error('Прыжки: объект не найден: ' + selector);
+      }
       return el;
     }
 
-    // Переводим координаты браузера в координаты игрового контейнера.
     rectWithinRoot(el) {
-      const r = el.getBoundingClientRect(), base = this.root.getBoundingClientRect();
-      const sx = this.root.clientWidth / base.width, sy = this.root.clientHeight / base.height;
-      if (!Number.isFinite(sx) || !Number.isFinite(sy)) throw new Error('Прыжки: контейнер не имеет размера');
-      return { x: (r.left - base.left) * sx, y: (r.top - base.top) * sy, w: r.width * sx, h: r.height * sy };
+      const r = el.getBoundingClientRect();
+      const base = this.root.getBoundingClientRect();
+      const sx = this.root.clientWidth / base.width;
+      const sy = this.root.clientHeight / base.height;
+      if (!Number.isFinite(sx) || !Number.isFinite(sy)) {
+        throw new Error('Прыжки: контейнер не имеет размера');
+      }
+      return {
+        x: (r.left - base.left) * sx,
+        y: (r.top - base.top) * sy,
+        w: r.width * sx,
+        h: r.height * sy
+      };
     }
 
-    landingPoint(el, landing = this.config.landing, start = false) {
-      const t = this.rectWithinRoot(el), c = this.rectWithinRoot(this.character);
+    landingPoint(
+      el,
+      landing = this.config.landing,
+      start = false
+    ) {
+      const t = this.rectWithinRoot(el);
+      const c = this.rectWithinRoot(this.character);
       const gap = Number(this.config.gap) || 0;
-      let x = t.x + (t.w - c.w) / 2, y = t.y + (t.h - c.h) / 2;
+      let x = t.x + (t.w - c.w) / 2;
+      let y = t.y + (t.h - c.h) / 2;
+
       if (landing === 'above') y = t.y - c.h - gap;
       if (landing === 'below') y = t.y + t.h + gap;
       if (landing === 'left') x = t.x - c.w - gap;
       if (landing === 'right') x = t.x + t.w + gap;
-      x += Number(start ? this.config.startOffsetX : this.config.offsetX) || 0;
-      y += Number(start ? this.config.startOffsetY : this.config.offsetY) || 0;
-      return {x, y};
+
+      x += Number(
+        start ? this.config.startOffsetX : this.config.offsetX
+      ) || 0;
+      y += Number(
+        start ? this.config.startOffsetY : this.config.offsetY
+      ) || 0;
+      return { x, y };
     }
 
     paint(p) {
       this.position = p;
-      this.character.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
+      this.character.style.transform =
+        `translate3d(${p.x}px, ${p.y}px, 0)`;
     }
 
     reposition() {
       if (this.destroyed || !this.root.clientWidth) return;
       const target = this.currentTarget || this.start;
-      this.paint(this.landingPoint(target, target === this.start ? this.config.startLanding : this.config.landing, target === this.start));
+      this.paint(this.landingPoint(
+        target,
+        target === this.start
+          ? this.config.startLanding
+          : this.config.landing,
+        target === this.start
+      ));
     }
 
     heightFor(distance) {
       const h = this.config.jumpHeight;
-      if (Number.isFinite(Number(h))) return Math.max(0, Number(h));
-      return clamp(distance * .23, 17, Math.min(105, this.root.clientHeight * .24)) * ({low:.6, medium:1, high:1.5}[h] || 1);
+      if (Number.isFinite(Number(h))) {
+        return Math.max(0, Number(h));
+      }
+      return clamp(
+        distance * .23,
+        17,
+        Math.min(105, this.root.clientHeight * .24)
+      ) * ({ low: .6, medium: 1, high: 1.5 }[h] || 1);
     }
 
     moveTo(el) {
       this.moving = true;
-      const from = {...this.position}, startTime = performance.now();
-      const duration = Math.max(0, Number(this.config.duration) || 0);
+      const from = { ...this.position };
+      const startTime = performance.now();
+      const duration = Math.max(
+        0, Number(this.config.duration) || 0
+      );
       const mode = this.config.movement;
+
       return new Promise(resolve => {
         this.activeMoveResolve = resolve;
+
         const tick = (now) => {
-          if (!this.moving || this.destroyed) { this.activeMoveResolve = null; resolve(false); return; }
-          const t = duration ? clamp((now - startTime) / duration, 0, 1) : 1;
+          if (!this.moving || this.destroyed) {
+            this.activeMoveResolve = null;
+            resolve(false);
+            return;
+          }
+
+          const t = duration
+            ? clamp((now - startTime) / duration, 0, 1)
+            : 1;
           const ease = (1 - Math.cos(Math.PI * t)) / 2;
           const to = this.landingPoint(el);
-          const d = Math.hypot(to.x - from.x, to.y - from.y);
-          const lift = mode === 'jump' ? Math.sin(Math.PI * t) * this.heightFor(d) :
-            mode === 'flight' ? Math.sin(Math.PI * t) * Math.min(22, d * .07) : 0;
-          this.paint({x: from.x + (to.x - from.x) * ease, y: from.y + (to.y - from.y) * ease - lift});
-          if (t < 1) this.frame = requestAnimationFrame(tick);
-          else { this.frame = null; this.activeMoveResolve = null; this.currentTarget = el; resolve(true); }
+          const d = Math.hypot(
+            to.x - from.x, to.y - from.y
+          );
+
+          const lift = mode === 'jump'
+            ? Math.sin(Math.PI * t) * this.heightFor(d)
+            : mode === 'flight'
+              ? Math.sin(Math.PI * t) *
+                Math.min(22, d * .07)
+              : 0;
+
+          this.paint({
+            x: from.x + (to.x - from.x) * ease,
+            y: from.y + (to.y - from.y) * ease - lift
+          });
+
+          if (t < 1) {
+            this.frame = requestAnimationFrame(tick);
+          } else {
+            this.frame = null;
+            this.activeMoveResolve = null;
+            this.currentTarget = el;
+            resolve(true);
+          }
         };
+
         this.frame = requestAnimationFrame(tick);
       });
     }
 
     chooseWrong(el) {
-      if (this.moving || this.completed || this.lockedWrong.has(el)) return;
+      if (
+        this.moving ||
+        this.completed ||
+        this.lockedWrong.has(el)
+      ) return;
+
       const effect = this.config.wrongEffect;
-      el.classList.remove('is-wrong-shake', 'is-wrong-glow');
+      el.classList.remove(
+        'is-wrong-shake', 'is-wrong-glow'
+      );
       void el.offsetWidth;
+
       if (effect === 'shake' || effect === 'glow') {
-        const cls = effect === 'shake' ? 'is-wrong-shake' : 'is-wrong-glow';
+        const cls = effect === 'shake'
+          ? 'is-wrong-shake'
+          : 'is-wrong-glow';
         el.classList.add(cls);
-        const timer = setTimeout(() => { el.classList.remove(cls); this.timers.delete(timer); }, 550);
+        const timer = setTimeout(() => {
+          el.classList.remove(cls);
+          this.timers.delete(timer);
+        }, 550);
         this.timers.add(timer);
       }
-      this.playSound(this.config.wrongSoundUrl);
+
+      this.playSound(
+        this.config.wrongSoundUrl, 'wrong'
+      );
+
       if (this.config.lockWrong) {
         this.lockedWrong.add(el);
         el.classList.add('is-locked');
         el.setAttribute('aria-disabled', 'true');
         if ('disabled' in el) el.disabled = true;
       }
-      this.root.dispatchEvent(new CustomEvent('GAME_WRONG', {bubbles:true, detail:{element:el}}));
+
+      this.root.dispatchEvent(new CustomEvent(
+        'GAME_WRONG',
+        { bubbles: true, detail: { element: el } }
+      ));
     }
 
     async chooseCorrect(el) {
-      if (this.moving || this.completed || this.found.has(el)) return;
-      if (this.config.mode === 'route' && el !== this.correct[this.found.size]) {
+      if (
+        this.moving ||
+        this.completed ||
+        this.found.has(el)
+      ) return;
+
+      if (
+        this.config.mode === 'route' &&
+        el !== this.correct[this.found.size]
+      ) {
         this.chooseWrong(el);
         return;
       }
+
       this.moving = true;
       this.found.add(el);
       el.classList.add('is-found');
+
+      if (this.config.correctEffect === 'pop') {
+        el.classList.add('is-correct-pop');
+        const timer = setTimeout(() => {
+          el.classList.remove('is-correct-pop');
+          this.timers.delete(timer);
+        }, 600);
+        this.timers.add(timer);
+      }
+
+      this.playSound(
+        this.config.correctSoundUrl, 'correct'
+      );
       el.setAttribute('aria-disabled', 'true');
       if ('disabled' in el) el.disabled = true;
       this.updateProgress();
+
       if (!await this.moveTo(el)) return;
+
       if (this.found.size === this.correct.length) {
-        if (this.finish && !await this.moveTo(this.finish)) return;
+        if (
+          this.finish &&
+          !await this.moveTo(this.finish)
+        ) return;
+
         this.moving = false;
         this.completed = true;
-        if (this.finish && this.config.finishEffect) this.finish.classList.add('is-finished');
-        const detail = {found:this.found.size, total:this.correct.length, lastElement:el, finishElement:this.finish, game:this};
-        this.root.dispatchEvent(new CustomEvent('GAME_COMPLETE', {bubbles:true, detail}));
+
+        if (this.finish && this.config.finishEffect) {
+          this.finish.classList.add('is-finished');
+        }
+
+        const detail = {
+          found: this.found.size,
+          total: this.correct.length,
+          lastElement: el,
+          finishElement: this.finish,
+          game: this
+        };
+
+        this.root.dispatchEvent(new CustomEvent(
+          'GAME_COMPLETE',
+          { bubbles: true, detail }
+        ));
+
         this.applyCompletion(detail);
-        if (typeof this.config.onComplete === 'function') this.config.onComplete(detail);
-      } else this.moving = false;
+        if (
+          typeof this.config.onComplete === 'function'
+        ) {
+          this.config.onComplete(detail);
+        }
+      } else {
+        this.moving = false;
+      }
     }
 
     updateProgress() {
-      const detail = {found:this.found.size, total:this.correct.length};
-      if (this.progress) this.progress.textContent = `Найдено: ${detail.found}/${detail.total}`;
-      this.root.dispatchEvent(new CustomEvent('GAME_PROGRESS', {bubbles:true, detail}));
+      const detail = {
+        found: this.found.size,
+        total: this.correct.length
+      };
+
+      if (this.progress) {
+        this.progress.textContent =
+          `Найдено: ${detail.found}/${detail.total}`;
+      }
+
+      this.root.dispatchEvent(new CustomEvent(
+        'GAME_PROGRESS',
+        { bubbles: true, detail }
+      ));
     }
 
-    playSound(url) {
-      if (!url) return;
-      try { const audio = new Audio(url); audio.play().catch(() => {}); } catch (e) { /* браузер запретил звук */ }
+    makeToneUrl(kind) {
+      this.toneUrls ||= new Map();
+      if (this.toneUrls.has(kind)) {
+        return this.toneUrls.get(kind);
+      }
+
+      const rate = 22050;
+      const seconds = kind === 'wrong' ? .38 : .4;
+      const count = Math.floor(rate * seconds);
+      const wav = new ArrayBuffer(44 + count * 2);
+      const data = new DataView(wav);
+
+      const label = (offset, text) => {
+        for (let i = 0; i < text.length; i++) {
+          data.setUint8(offset + i, text.charCodeAt(i));
+        }
+      };
+
+      label(0, 'RIFF');
+      data.setUint32(4, 36 + count * 2, true);
+      label(8, 'WAVE');
+      label(12, 'fmt ');
+      data.setUint32(16, 16, true);
+      data.setUint16(20, 1, true);
+      data.setUint16(22, 1, true);
+      data.setUint32(24, rate, true);
+      data.setUint32(28, rate * 2, true);
+      data.setUint16(32, 2, true);
+      data.setUint16(34, 16, true);
+      label(36, 'data');
+      data.setUint32(40, count * 2, true);
+
+      for (let i = 0; i < count; i++) {
+        const t = i / rate;
+        const fade = Math.min(1, t / .018) *
+          Math.pow(
+            Math.max(0, 1 - t / seconds),
+            1.25
+          );
+
+        const wave = kind === 'wrong'
+          ? Math.sin(
+              2 * Math.PI *
+              (280 * t - 85 * t * t / seconds)
+            )
+          : Math.sin(
+              2 * Math.PI *
+              (
+                kind === 'complete'
+                  ? (t < .13 ? 523 : t < .26 ? 659 : 784)
+                  : (t < .18 ? 587 : 880)
+              ) * t
+            );
+
+        data.setInt16(
+          44 + i * 2,
+          Math.round(wave * fade * 12000),
+          true
+        );
+      }
+
+      const audioUrl = URL.createObjectURL(
+        new Blob([wav], { type: 'audio/wav' })
+      );
+      this.toneUrls.set(kind, audioUrl);
+      return audioUrl;
+    }
+
+    showSoundStatus(message) {
+      const status =
+        document.getElementById('sound-status');
+      if (status) status.textContent = message;
+    }
+
+    playSound(
+      url,
+      kind = 'correct',
+      diagnostic = false
+    ) {
+      if (!this.config.soundEnabled) {
+        if (diagnostic) {
+          this.showSoundStatus(
+            'Звук выключен в настройках игры.'
+          );
+        }
+        return;
+      }
+
+      try {
+        const audio = new Audio(
+          url || this.makeToneUrl(kind)
+        );
+        audio.volume = 1;
+        const playback = audio.play();
+
+        if (
+          playback &&
+          typeof playback.then === 'function'
+        ) {
+          playback.then(() => {
+            if (diagnostic) {
+              this.showSoundStatus(
+                'Звук запущен. Если его не слышно, проверь громкость и звук вкладки.'
+              );
+            }
+          }).catch(() => {
+            this.showSoundStatus(
+              'Браузер заблокировал звук. Открой HTML в отдельной вкладке и нажми 🔊.'
+            );
+          });
+        }
+      } catch (e) {
+        this.showSoundStatus(
+          'Не удалось запустить звук в этом браузере.'
+        );
+      }
     }
 
     applyCompletion(detail) {
       const c = this.config.completion;
+
       switch (c.action) {
         case 'message': {
           const node = document.createElement('div');
@@ -291,55 +633,136 @@
           this.cleanupCompletion = () => node.remove();
           break;
         }
+
         case 'reveal': {
-          const node = this.mustFind(c.targetSelector), hidden = node.hidden;
+          const node = this.mustFind(c.targetSelector);
+          const hidden = node.hidden;
           node.hidden = false;
-          this.cleanupCompletion = () => { node.hidden = hidden; };
+          this.cleanupCompletion = () => {
+            node.hidden = hidden;
+          };
           break;
         }
+
         case 'animation':
         case 'addClass': {
-          const node = this.mustFind(c.targetSelector), cls = c.className || 'is-finished';
+          const node = this.mustFind(c.targetSelector);
+          const cls = c.className || 'is-finished';
           const already = node.classList.contains(cls);
           node.classList.add(cls);
-          this.cleanupCompletion = () => { if (!already) node.classList.remove(cls); };
+          this.cleanupCompletion = () => {
+            if (!already) node.classList.remove(cls);
+          };
           break;
         }
-        case 'sound': this.playSound(c.soundUrl); break;
-        case 'openUrl': if (c.url) window.open(c.url, '_blank', 'noopener,noreferrer'); break;
+
+        case 'sound':
+          this.playSound(c.soundUrl, 'complete');
+          break;
+
+        case 'openUrl':
+          if (c.url) {
+            window.open(
+              c.url, '_blank', 'noopener,noreferrer'
+            );
+          }
+          break;
+
         case 'nextSlide':
-        case 'custom': if (typeof c.run === 'function') c.run(detail); break;
-        case 'none': break;
-        default: throw new Error('Прыжки: неизвестное действие завершения: ' + c.action);
+        case 'custom':
+          if (typeof c.run === 'function') {
+            c.run(detail);
+          }
+          break;
+
+        case 'none':
+          break;
+
+        default:
+          throw new Error(
+            'Прыжки: неизвестное действие завершения: ' +
+            c.action
+          );
       }
     }
 
     reset() {
       cancelAnimationFrame(this.frame);
-      if (this.activeMoveResolve) { this.activeMoveResolve(false); this.activeMoveResolve = null; }
+
+      if (this.activeMoveResolve) {
+        this.activeMoveResolve(false);
+        this.activeMoveResolve = null;
+      }
+
       this.frame = null;
       this.moving = false;
       this.completed = false;
-      if (this.timers) for (const timer of this.timers) clearTimeout(timer);
-      this.timers = new Set();
-      if (this.cleanupCompletion) { this.cleanupCompletion(); this.cleanupCompletion = null; }
-      if (this.found) this.found.clear(); else this.found = new Set();
-      this.lockedWrong = new Set();
-      for (const el of [...this.correct, ...this.wrong]) {
-        el.classList.remove('is-found', 'is-locked', 'is-wrong-shake', 'is-wrong-glow');
-        const old = this.originalAria.get(el);
-        if (old === null) el.removeAttribute('aria-disabled'); else el.setAttribute('aria-disabled', old);
-        if ('disabled' in el) el.disabled = this.originalDisabled.get(el);
+
+      if (this.timers) {
+        for (const timer of this.timers) {
+          clearTimeout(timer);
+        }
       }
-      if (this.finish) this.finish.classList.remove('is-finished');
+      this.timers = new Set();
+
+      if (this.cleanupCompletion) {
+        this.cleanupCompletion();
+        this.cleanupCompletion = null;
+      }
+
+      if (this.found) {
+        this.found.clear();
+      } else {
+        this.found = new Set();
+      }
+      this.lockedWrong = new Set();
+
+      for (const el of [
+        ...this.correct,
+        ...this.wrong
+      ]) {
+        el.classList.remove(
+          'is-found',
+          'is-locked',
+          'is-correct-pop',
+          'is-wrong-shake',
+          'is-wrong-glow'
+        );
+        const old = this.originalAria.get(el);
+        if (old === null) {
+          el.removeAttribute('aria-disabled');
+        } else {
+          el.setAttribute('aria-disabled', old);
+        }
+        if ('disabled' in el) {
+          el.disabled =
+            this.originalDisabled.get(el);
+        }
+      }
+
+      if (this.finish) {
+        this.finish.classList.remove(
+          'is-finished'
+        );
+      }
+
       this.currentTarget = this.start;
       this.reposition();
       this.updateProgress();
-      if (typeof this.config.onReset === 'function') this.config.onReset();
+
+      if (
+        typeof this.config.onReset === 'function'
+      ) {
+        this.config.onReset();
+      }
     }
 
     setMode(mode) {
-      if (!['free', 'route'].includes(mode)) throw new Error('Прыжки: неизвестный режим');
+      if (!['free', 'route'].includes(mode)) {
+        throw new Error(
+          'Прыжки: неизвестный режим'
+        );
+      }
       this.config.mode = mode;
       this.reset();
     }
@@ -347,44 +770,145 @@
     destroy() {
       this.reset();
       this.destroyed = true;
-      this.root.removeEventListener('click', this.boundClick);
-      window.removeEventListener('resize', this.boundResize);
-      if (this.observer) this.observer.disconnect();
-      if (this.originalSibling && this.originalSibling.parentNode === this.originalParent)
-        this.originalParent.insertBefore(this.character, this.originalSibling);
-      else this.originalParent.appendChild(this.character);
-      if (this.originalCharacterStyle === null) this.character.removeAttribute('style');
-      else this.character.setAttribute('style', this.originalCharacterStyle);
-      this.root.style.position = this.originalRootPosition;
+      this.root.removeEventListener(
+        'click', this.boundClick
+      );
+      window.removeEventListener(
+        'resize', this.boundResize
+      );
+
+      if (this.observer) {
+        this.observer.disconnect();
+      }
+
+      if (
+        this.originalSibling &&
+        this.originalSibling.parentNode ===
+          this.originalParent
+      ) {
+        this.originalParent.insertBefore(
+          this.character,
+          this.originalSibling
+        );
+      } else {
+        this.originalParent.appendChild(
+          this.character
+        );
+      }
+
+      if (
+        this.originalCharacterStyle === null
+      ) {
+        this.character.removeAttribute(
+          'style'
+        );
+      } else {
+        this.character.setAttribute(
+          'style',
+          this.originalCharacterStyle
+        );
+      }
+
+      this.root.style.position =
+        this.originalRootPosition;
       this.overlay.remove();
+
+      if (this.toneUrls) {
+        for (const url of this.toneUrls.values()) {
+          URL.revokeObjectURL(url);
+        }
+      }
     }
   }
+
   window.JumpGame = JumpGame;
 })();
 
-// Данные демонстрации. Редактору достаточно будет сформировать такой объект.
+// Здесь меняются настройки игры.
 const CONFIG = {
   rootSelector: '#game-board',
-  characterSelector: '#hero', startSelector: '#start',
-  correctAnswers: ['#answer-1', '#answer-2', '#answer-3', '#answer-4'],
-  wrongAnswers: ['#wrong-1', '#wrong-2', '#wrong-3'],
-  finishSelector: '#finish', progressSelector: '#progress',
-  mode: 'free', movement: 'jump', jumpHeight: 'medium', duration: 690,
-  landing: 'above', gap: 3, offsetX: 0, offsetY: 0,
-  wrongEffect: 'shake', lockWrong: false, wrongSoundUrl: null,
-  completion: { action: 'message', message: 'Отлично! Все льдины найдены 🎉' }
+  characterSelector: '#hero',
+  startSelector: '#start',
+  correctAnswers: [
+    '#answer-1',
+    '#answer-2',
+    '#answer-3',
+    '#answer-4'
+  ],
+  wrongAnswers: [
+    '#wrong-1',
+    '#wrong-2',
+    '#wrong-3'
+  ],
+  finishSelector: '#finish',
+  progressSelector: '#progress',
+  mode: 'free',
+  movement: 'jump',
+  jumpHeight: 'medium',
+  duration: 690,
+  landing: 'above',
+  gap: 3,
+  offsetX: 0,
+  offsetY: 0,
+  correctEffect: 'pop',
+  wrongEffect: 'shake',
+  lockWrong: false,
+  soundEnabled: true,
+  correctSoundUrl: null,
+  wrongSoundUrl: null,
+  completion: {
+    action: 'message',
+    message:
+      'Отлично! Все льдины найдены 🎉'
+  }
 };
+
 const game = new JumpGame(CONFIG);
-window.jumpGame = game; // game.reset(), game.setMode('route'), game.destroy()
-document.getElementById('reset-game').addEventListener('click', () => game.reset());
+window.jumpGame = game;
+
+document.getElementById(
+  'reset-game'
+).addEventListener(
+  'click',
+  () => game.reset()
+);
+
+document.getElementById(
+  'test-sound'
+).addEventListener(
+  'click',
+  () => game.playSound(
+    null, 'correct', true
+  )
+);
+
 for (const mode of ['free', 'route']) {
-  document.getElementById(mode + '-mode').addEventListener('click', () => {
-    game.setMode(mode);
-    document.getElementById('free-mode').setAttribute('aria-pressed', String(mode === 'free'));
-    document.getElementById('route-mode').setAttribute('aria-pressed', String(mode === 'route'));
-    document.getElementById('mode-hint').textContent = mode === 'free' ?
-      'Нажми на все числа, кратные 6. Порядок любой.' : 'Прыгай по маршруту: 12 → 18 → 24 → 30.';
-  });
+  document.getElementById(
+    mode + '-mode'
+  ).addEventListener(
+    'click',
+    () => {
+      game.setMode(mode);
+      document.getElementById(
+        'free-mode'
+      ).setAttribute(
+        'aria-pressed',
+        String(mode === 'free')
+      );
+      document.getElementById(
+        'route-mode'
+      ).setAttribute(
+        'aria-pressed',
+        String(mode === 'route')
+      );
+      document.getElementById(
+        'mode-hint'
+      ).textContent =
+        mode === 'free'
+          ? 'Нажми на все числа, кратные 6. Порядок любой.'
+          : 'Прыгай по маршруту: 12 → 18 → 24 → 30.';
+    }
+  );
 }
 </script>
 </body>
