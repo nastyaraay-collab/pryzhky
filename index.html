@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Прыжки — рабочая версия игры</title>
+  <title>Прыжки — версия 4: финиш без подсказки</title>
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #17314d; background: #83c2dd; }
     * { box-sizing: border-box; }
@@ -19,22 +19,27 @@
     .controls button:focus-visible, .answer:focus-visible { outline: 3px solid #e79c2f; outline-offset: 3px; }
     .sound-status { position: absolute; left: 3%; bottom: 2%; z-index: 11; max-width: 65%; padding: .5cqw 1cqw; border-radius: 1cqw; background: #fffdf1; font-size: clamp(9px, 1.25cqw, 16px); box-shadow: 0 .3cqw 1cqw #17314d55; }
     .sound-status:empty { display: none; }
+    .version-badge { position: absolute; right: 2%; bottom: 2%; z-index: 20; padding: .5cqw 1cqw; background: #ffda6c; border: 2px solid #975b13; border-radius: 1cqw; font-size: clamp(10px, 1.25cqw, 17px); font-weight: 800; box-shadow: 0 .3cqw 1cqw #17314d55; pointer-events: none; }
     .board { position: relative; width: 100%; height: 100%; container-type: inline-size; overflow: hidden; isolation: isolate; background: linear-gradient(#c8eafa 0%, #e9f9ff 61%, #83c2dd 62%, #559fca 100%); }
     .board::before { content: ""; position: absolute; inset: 7% 0 auto; height: 32%; background: radial-gradient(ellipse at 20% 80%, #fff9 0 8%, transparent 8.5%), radial-gradient(ellipse at 80% 10%, #fff9 0 10%, transparent 10.5%); opacity: .65; pointer-events: none; }
     .instruction { position: absolute; left: 4%; top: 15%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 1.5cqw; font-size: clamp(10px, 2.2cqw, 24px); font-weight: 720; }
-    .count { position: absolute; right: 4%; top: 16%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 1.3cqw; font-size: clamp(9px, 1.65cqw, 18px); }
     .answer, .start, .finish { position: absolute; width: 12%; height: 15%; border-radius: 50% 50% 35% 35%; border: 0; background: #efffff; box-shadow: 0 .7cqw 0 #a8d8e6, 0 1.2cqw 1.7cqw #194a7550; display: grid; place-items: center; font-size: clamp(12px, 3.2cqw, 42px); font-weight: 800; color: #17466c; }
     .answer { cursor: pointer; touch-action: manipulation; }
     .answer:hover:not(.is-found):not(.is-locked) { background: #fff8d6; }
     .answer.is-found { background: #c9f5e1; color: #22634d; cursor: default; }
     .answer.is-correct-pop { animation: correct-pop .55s ease-out; }
     .answer.is-locked { opacity: .55; cursor: default; }
-    .start, .finish { pointer-events: none; }
+    .start { pointer-events: none; }
+    .finish { cursor: pointer; touch-action: manipulation; }
+    .finish:hover { background: #fff4cb; }
+    .finish.is-ready { animation: finish-ready 1.2s ease-in-out infinite; }
+    .finish.is-too-early { animation: wrong-shake .35s ease-in-out; }
     .answer.is-wrong-shatter, .answer.is-wrong-gone { opacity: 0; pointer-events: none; }
     .start { left: 5%; top: 69%; width: 13%; }
     .finish { left: 82%; top: 67%; width: 14%; font-size: clamp(16px, 3.6cqw, 48px); }
     .finish.is-finished { animation: finish-pulse .75s ease-in-out 3; }
     @keyframes finish-pulse { 50% { filter: drop-shadow(0 0 20px #f9bd22); transform: scale(1.12); } }
+    @keyframes finish-ready { 50% { filter: drop-shadow(0 0 1cqw #f9bd22); } }
     #answer-1 { left: 24%; top: 54%; }
     #answer-2 { left: 46%; top: 73%; }
     #answer-3 { left: 64%; top: 43%; }
@@ -50,6 +55,7 @@
     @keyframes finish-spark { 0% { transform: translate(-50%, -50%) scale(.2); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.1); opacity: 0; } }
     .character { position: absolute; left: 0; top: 0; width: 8%; height: 15%; display: grid; place-items: center; font-size: clamp(20px, 5cqw, 65px); line-height: 1; will-change: transform; filter: drop-shadow(2px 5px 3px #17466c50); }
     .jump-message { position: absolute; left: 50%; top: 48%; z-index: 10; transform: translate(-50%, -50%); background: #fffdf1; padding: 2.5% 5%; border-radius: 2cqw; box-shadow: 0 1cqw 3.5cqw #234a6870; text-align: center; font-size: clamp(15px, 3cqw, 34px); font-weight: 800; pointer-events: none; max-width: 80%; }
+    .jump-hint { position: absolute; left: 50%; top: 31%; z-index: 12; transform: translateX(-50%); background: #fff8e7; border: 2px solid #d58846; border-radius: 1.5cqw; padding: 1% 2%; text-align: center; font-size: clamp(12px, 2cqw, 25px); font-weight: 700; pointer-events: none; max-width: 80%; }
     @keyframes correct-pop { 0% { filter: brightness(1); } 40% { filter: brightness(1.25) drop-shadow(0 0 1.6cqw #f9cc38); } 100% { filter: brightness(1); } }
     .is-wrong-shake { animation: wrong-shake .35s ease-in-out; }
     .is-wrong-glow { animation: wrong-glow .5s ease-out; }
@@ -74,7 +80,6 @@
       </div>
     </div>
     <div class="instruction" id="instruction">Найди числа, кратные 6</div>
-    <div class="count" id="progress" aria-live="polite">Найдено: 0/4</div>
     <div id="start" class="start" aria-label="Старт">Старт</div>
     <button id="answer-1" class="answer" type="button">12</button>
     <button id="answer-2" class="answer" type="button">18</button>
@@ -83,9 +88,10 @@
     <button id="wrong-1" class="answer" type="button">14</button>
     <button id="wrong-2" class="answer" type="button">25</button>
     <button id="wrong-3" class="answer" type="button">32</button>
-    <div id="finish" class="finish" aria-label="Финиш">🎁</div>
+    <button id="finish" class="finish" type="button" aria-label="Финиш">🎁</button>
     <div id="hero" class="character" aria-label="Пингвин">🐧</div>
     <div id="sound-status" class="sound-status" role="status" aria-live="polite"></div>
+    <div class="version-badge">ВЕРСИЯ 4 · НАЖМИ НА ФИНИШ</div>
   </section>
 </main>
 <script>
@@ -119,29 +125,24 @@
     finishEffect: true,
     finishSoundEnabled: true,
     finishSoundUrl: null,
+    earlyFinishMessage: 'Подумай ещё',
+    earlyFinishDuration: 2200,
+    earlyFinishSound: true,
     progressSelector: null,
     completion: { action: 'none' },
     onComplete: null,
     onReset: null
   };
 
-  const clamp = (n, a, b) =>
-    Math.min(b, Math.max(a, n));
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
   class JumpGame {
     constructor(options) {
-      this.config = Object.assign(
-        {}, DEFAULTS, options
-      );
+      this.config = Object.assign({}, DEFAULTS, options);
       this.config.completion = Object.assign(
-        {},
-        DEFAULTS.completion,
-        options.completion || {}
+        {}, DEFAULTS.completion, options.completion || {}
       );
-
-      this.root = document.querySelector(
-        this.config.rootSelector
-      );
+      this.root = document.querySelector(this.config.rootSelector);
       if (!this.root) {
         throw new Error(
           'Прыжки: игровой контейнер не найден: ' +
@@ -155,87 +156,50 @@
         try {
           el = this.root.querySelector(selector);
         } catch (e) { /* ID без # */ }
-        if (
-          !el &&
-          /^[A-Za-z][\w:-]*$/.test(selector)
-        ) {
-          el = Array.from(
-            this.root.querySelectorAll('[id]')
-          ).find(e => e.id === selector) || null;
+        if (!el && /^[A-Za-z][\w:-]*$/.test(selector)) {
+          el = Array.from(this.root.querySelectorAll('[id]'))
+            .find(e => e.id === selector) || null;
         }
         return el;
       };
 
-      this.character = this.query(
-        this.config.characterSelector
-      );
-      this.start = this.query(
-        this.config.startSelector
-      );
+      this.character = this.query(this.config.characterSelector);
+      this.start = this.query(this.config.startSelector);
       if (!this.character || !this.start) {
         throw new Error(
           'Прыжки: не найден персонаж или стартовая точка'
         );
       }
 
-      this.correct =
-        this.config.correctAnswers.map(
-          s => this.mustFind(s)
-        );
-      this.wrong =
-        this.config.wrongAnswers.map(
-          s => this.mustFind(s)
-        );
-
+      this.correct = this.config.correctAnswers.map(s => this.mustFind(s));
+      this.wrong = this.config.wrongAnswers.map(s => this.mustFind(s));
       if (
         !this.correct.length ||
-        new Set([
-          ...this.correct,
-          ...this.wrong
-        ]).size !==
-        this.correct.length +
-        this.wrong.length
+        new Set([...this.correct, ...this.wrong]).size !==
+          this.correct.length + this.wrong.length
       ) {
         throw new Error(
           'Прыжки: нужны правильные ответы без повторов и пересечений'
         );
       }
 
-      this.finish =
-        this.config.finishSelector
-          ? this.mustFind(
-              this.config.finishSelector
-            )
-          : null;
-      this.progress = this.query(
-        this.config.progressSelector
-      );
+      this.finish = this.config.finishSelector
+        ? this.mustFind(this.config.finishSelector)
+        : null;
+      this.progress = this.query(this.config.progressSelector);
+      this.originalCharacterStyle = this.character.getAttribute('style');
+      this.originalParent = this.character.parentNode;
+      this.originalSibling = this.character.nextSibling;
+      this.originalRootPosition = this.root.style.position;
 
-      this.originalCharacterStyle =
-        this.character.getAttribute('style');
-      this.originalParent =
-        this.character.parentNode;
-      this.originalSibling =
-        this.character.nextSibling;
-      this.originalRootPosition =
-        this.root.style.position;
-
-      if (
-        getComputedStyle(this.root).position ===
-        'static'
-      ) {
+      if (getComputedStyle(this.root).position === 'static') {
         this.root.style.position = 'relative';
       }
 
-      this.overlay =
-        document.createElement('div');
-      this.overlay.className =
-        'jump-overlay';
+      this.overlay = document.createElement('div');
+      this.overlay.className = 'jump-overlay';
       this.root.appendChild(this.overlay);
-      this.overlay.appendChild(
-        this.character
-      );
-
+      this.overlay.appendChild(this.character);
       Object.assign(this.character.style, {
         position: 'absolute',
         left: '0',
@@ -245,24 +209,21 @@
 
       this.originalAria = new Map(
         [...this.correct, ...this.wrong].map(
-          el => [
-            el,
-            el.getAttribute('aria-disabled')
-          ]
+          el => [el, el.getAttribute('aria-disabled')]
         )
       );
       this.originalDisabled = new Map(
         [...this.correct, ...this.wrong].map(
-          el => [
-            el,
-            'disabled' in el
-              ? el.disabled
-              : null
-          ]
+          el => [el, 'disabled' in el ? el.disabled : null]
         )
       );
 
       this.boundClick = (event) => {
+        if (this.finish && this.finish.contains(event.target)) {
+          this.chooseFinish();
+          return;
+        }
+
         let target = event.target;
         while (
           target &&
@@ -273,41 +234,22 @@
           target = target.parentElement;
         }
 
-        if (
-          this.correct.includes(target)
-        ) {
+        if (this.correct.includes(target)) {
           this.chooseCorrect(target);
-        } else if (
-          this.wrong.includes(target)
-        ) {
+        } else if (this.wrong.includes(target)) {
           this.chooseWrong(target);
         }
       };
 
       this.boundResize = () => {
-        if (!this.moving) {
-          this.reposition();
-        }
+        if (!this.moving) this.reposition();
       };
 
-      this.root.addEventListener(
-        'click', this.boundClick
-      );
-      window.addEventListener(
-        'resize', this.boundResize
-      );
-
-      if (
-        typeof ResizeObserver !==
-        'undefined'
-      ) {
-        this.observer =
-          new ResizeObserver(
-            this.boundResize
-          );
-        this.observer.observe(
-          this.root
-        );
+      this.root.addEventListener('click', this.boundClick);
+      window.addEventListener('resize', this.boundResize);
+      if (typeof ResizeObserver !== 'undefined') {
+        this.observer = new ResizeObserver(this.boundResize);
+        this.observer.observe(this.root);
       }
 
       this.reset();
@@ -315,36 +257,18 @@
 
     mustFind(selector) {
       const el = this.query(selector);
-      if (!el) {
-        throw new Error(
-          'Прыжки: объект не найден: ' +
-          selector
-        );
-      }
+      if (!el) throw new Error('Прыжки: объект не найден: ' + selector);
       return el;
     }
 
     rectWithinRoot(el) {
-      const r =
-        el.getBoundingClientRect();
-      const base =
-        this.root.getBoundingClientRect();
-      const sx =
-        this.root.clientWidth /
-        base.width;
-      const sy =
-        this.root.clientHeight /
-        base.height;
-
-      if (
-        !Number.isFinite(sx) ||
-        !Number.isFinite(sy)
-      ) {
-        throw new Error(
-          'Прыжки: контейнер не имеет размера'
-        );
+      const r = el.getBoundingClientRect();
+      const base = this.root.getBoundingClientRect();
+      const sx = this.root.clientWidth / base.width;
+      const sy = this.root.clientHeight / base.height;
+      if (!Number.isFinite(sx) || !Number.isFinite(sy)) {
+        throw new Error('Прыжки: контейнер не имеет размера');
       }
-
       return {
         x: (r.left - base.left) * sx,
         y: (r.top - base.top) * sy,
@@ -353,48 +277,25 @@
       };
     }
 
-    landingPoint(
-      el,
-      landing = this.config.landing,
-      start = false
-    ) {
+    landingPoint(el, landing = this.config.landing, start = false) {
       const t = this.rectWithinRoot(el);
-      const c = this.rectWithinRoot(
-        this.character
-      );
-      const gap =
-        Number(this.config.gap) || 0;
+      const c = this.rectWithinRoot(this.character);
+      const gap = Number(this.config.gap) || 0;
+      let x = t.x + (t.w - c.w) / 2;
+      let y = t.y + (t.h - c.h) / 2;
 
-      let x =
-        t.x + (t.w - c.w) / 2;
-      let y =
-        t.y + (t.h - c.h) / 2;
-
-      if (landing === 'above') {
-        y = t.y - c.h - gap;
-      }
-      if (landing === 'below') {
-        y = t.y + t.h + gap;
-      }
-      if (landing === 'left') {
-        x = t.x - c.w - gap;
-      }
-      if (landing === 'right') {
-        x = t.x + t.w + gap;
-      }
+      if (landing === 'above') y = t.y - c.h - gap;
+      if (landing === 'below') y = t.y + t.h + gap;
+      if (landing === 'left') x = t.x - c.w - gap;
+      if (landing === 'right') x = t.x + t.w + gap;
 
       x += Number(
-        start
-          ? this.config.startOffsetX
-          : this.config.offsetX
+        start ? this.config.startOffsetX : this.config.offsetX
       ) || 0;
       y += Number(
-        start
-          ? this.config.startOffsetY
-          : this.config.offsetY
+        start ? this.config.startOffsetY : this.config.offsetY
       ) || 0;
-
-      return { x, y };
+      return {x, y};
     }
 
     paint(p) {
@@ -404,221 +305,103 @@
     }
 
     reposition() {
-      if (
-        this.destroyed ||
-        !this.root.clientWidth
-      ) return;
-
-      const target =
-        this.currentTarget ||
-        this.start;
-
-      this.paint(
-        this.landingPoint(
-          target,
-          target === this.start
-            ? this.config.startLanding
-            : this.config.landing,
-          target === this.start
-        )
-      );
+      if (this.destroyed || !this.root.clientWidth) return;
+      const target = this.currentTarget || this.start;
+      this.paint(this.landingPoint(
+        target,
+        target === this.start
+          ? this.config.startLanding
+          : this.config.landing,
+        target === this.start
+      ));
     }
 
     heightFor(distance) {
-      const h =
-        this.config.jumpHeight;
-
-      if (
-        Number.isFinite(Number(h))
-      ) {
-        return Math.max(
-          0, Number(h)
-        );
+      const h = this.config.jumpHeight;
+      if (Number.isFinite(Number(h))) {
+        return Math.max(0, Number(h));
       }
-
       return clamp(
         distance * .23,
         17,
-        Math.min(
-          105,
-          this.root.clientHeight *
-            .24
-        )
-      ) *
-      ({
-        low: .6,
-        medium: 1,
-        high: 1.5
-      }[h] || 1);
+        Math.min(105, this.root.clientHeight * .24)
+      ) * ({low:.6, medium:1, high:1.5}[h] || 1);
     }
 
     moveTo(el) {
       this.moving = true;
-      const from = {
-        ...this.position
-      };
-      const startTime =
-        performance.now();
-      const duration =
-        Math.max(
-          0,
-          Number(
-            this.config.duration
-          ) || 0
-        );
-      const mode =
-        this.config.movement;
+      const from = {...this.position};
+      const startTime = performance.now();
+      const duration = Math.max(0, Number(this.config.duration) || 0);
+      const mode = this.config.movement;
 
       return new Promise(resolve => {
-        this.activeMoveResolve =
-          resolve;
-
+        this.activeMoveResolve = resolve;
         const tick = (now) => {
-          if (
-            !this.moving ||
-            this.destroyed
-          ) {
-            this.activeMoveResolve =
-              null;
+          if (!this.moving || this.destroyed) {
+            this.activeMoveResolve = null;
             resolve(false);
             return;
           }
 
           const t = duration
-            ? clamp(
-                (now - startTime) /
-                  duration,
-                0,
-                1
-              )
+            ? clamp((now - startTime) / duration, 0, 1)
             : 1;
-          const ease =
-            (1 - Math.cos(
-              Math.PI * t
-            )) / 2;
-          const to =
-            this.landingPoint(el);
-          const d =
-            Math.hypot(
-              to.x - from.x,
-              to.y - from.y
-            );
-
-          const lift =
-            mode === 'jump'
-              ? Math.sin(
-                  Math.PI * t
-                ) *
-                this.heightFor(d)
-              : mode === 'flight'
-                ? Math.sin(
-                    Math.PI * t
-                  ) *
-                  Math.min(
-                    22,
-                    d * .07
-                  )
-                : 0;
+          const ease = (1 - Math.cos(Math.PI * t)) / 2;
+          const to = this.landingPoint(el);
+          const d = Math.hypot(to.x - from.x, to.y - from.y);
+          const lift = mode === 'jump'
+            ? Math.sin(Math.PI * t) * this.heightFor(d)
+            : mode === 'flight'
+              ? Math.sin(Math.PI * t) * Math.min(22, d * .07)
+              : 0;
 
           this.paint({
-            x:
-              from.x +
-              (to.x - from.x) *
-              ease,
-            y:
-              from.y +
-              (to.y - from.y) *
-              ease -
-              lift
+            x: from.x + (to.x - from.x) * ease,
+            y: from.y + (to.y - from.y) * ease - lift
           });
 
           if (t < 1) {
-            this.frame =
-              requestAnimationFrame(
-                tick
-              );
+            this.frame = requestAnimationFrame(tick);
           } else {
             this.frame = null;
-            this.activeMoveResolve =
-              null;
-            this.currentTarget =
-              el;
+            this.activeMoveResolve = null;
+            this.currentTarget = el;
             resolve(true);
           }
         };
 
-        this.frame =
-          requestAnimationFrame(
-            tick
-          );
+        this.frame = requestAnimationFrame(tick);
       });
     }
 
-    effectLayer(
-      el,
-      className
-    ) {
-      const r =
-        this.rectWithinRoot(el);
-      const layer =
-        document.createElement(
-          'div'
-        );
-      layer.className =
-        className;
-
-      Object.assign(
-        layer.style,
-        {
-          left: r.x + 'px',
-          top: r.y + 'px',
-          width: r.w + 'px',
-          height: r.h + 'px'
-        }
-      );
-
-      this.root.appendChild(
-        layer
-      );
-      this.effectNodes.add(
-        layer
-      );
-
-      return {
-        layer,
-        width: r.w,
-        height: r.h
-      };
+    effectLayer(el, className) {
+      const r = this.rectWithinRoot(el);
+      const layer = document.createElement('div');
+      layer.className = className;
+      Object.assign(layer.style, {
+        left: r.x + 'px',
+        top: r.y + 'px',
+        width: r.w + 'px',
+        height: r.h + 'px'
+      });
+      this.root.appendChild(layer);
+      this.effectNodes.add(layer);
+      return {layer, width:r.w, height:r.h};
     }
 
-    removeEffectAfter(
-      layer,
-      ms
-    ) {
-      const timer = setTimeout(
-        () => {
-          layer.remove();
-          this.effectNodes.delete(
-            layer
-          );
-          this.timers.delete(
-            timer
-          );
-        },
-        ms
-      );
+    removeEffectAfter(layer, ms) {
+      const timer = setTimeout(() => {
+        layer.remove();
+        this.effectNodes.delete(layer);
+        this.timers.delete(timer);
+      }, ms);
       this.timers.add(timer);
     }
 
     shatter(el) {
-      const {
-        layer,
-        width,
-        height
-      } = this.effectLayer(
-        el,
-        'ice-fragments'
-      );
+      const {layer, width, height} =
+        this.effectLayer(el, 'ice-fragments');
 
       const shapes = [
         'polygon(50% 50%, 0% 0%, 50% 0%)',
@@ -631,608 +414,329 @@
         'polygon(50% 50%, 0% 50%, 0% 0%)'
       ];
 
-      shapes.forEach(
-        (shape, index) => {
-          const angle =
-            (index - 1.5) *
-            Math.PI / 4;
-          const shard =
-            document.createElement(
-              'div'
-            );
+      shapes.forEach((shape, index) => {
+        const angle = (index - 1.5) * Math.PI / 4;
+        const shard = document.createElement('div');
+        shard.className = 'ice-shard';
+        shard.style.setProperty('--shape', shape);
+        shard.style.setProperty(
+          '--dx', Math.cos(angle) * width * .8 + 'px'
+        );
+        shard.style.setProperty(
+          '--dy', Math.sin(angle) * height * 1.2 + 'px'
+        );
+        shard.style.setProperty(
+          '--rot', (index % 2 ? 45 : -45) + 'deg'
+        );
+        layer.appendChild(shard);
+      });
 
-          shard.className =
-            'ice-shard';
-          shard.style.setProperty(
-            '--shape',
-            shape
-          );
-          shard.style.setProperty(
-            '--dx',
-            Math.cos(angle) *
-              width * .8 +
-              'px'
-          );
-          shard.style.setProperty(
-            '--dy',
-            Math.sin(angle) *
-              height * 1.2 +
-              'px'
-          );
-          shard.style.setProperty(
-            '--rot',
-            (index % 2
-              ? 45
-              : -45) +
-              'deg'
-          );
-          layer.appendChild(
-            shard
-          );
-        }
-      );
-
-      el.classList.add(
-        'is-wrong-shatter'
-      );
-
-      const timer = setTimeout(
-        () => {
-          el.classList.remove(
-            'is-wrong-shatter'
-          );
-          el.classList.add(
-            'is-wrong-gone'
-          );
-          this.timers.delete(
-            timer
-          );
-        },
-        790
-      );
+      el.classList.add('is-wrong-shatter');
+      const timer = setTimeout(() => {
+        el.classList.remove('is-wrong-shatter');
+        el.classList.add('is-wrong-gone');
+        this.timers.delete(timer);
+      }, 790);
       this.timers.add(timer);
-      this.removeEffectAfter(
-        layer,
-        850
-      );
+      this.removeEffectAfter(layer, 850);
     }
 
     finishBurst() {
       if (!this.finish) return;
+      const {layer, width, height} =
+        this.effectLayer(this.finish, 'finish-burst');
 
-      const {
-        layer,
-        width,
-        height
-      } = this.effectLayer(
-        this.finish,
-        'finish-burst'
-      );
-
-      for (
-        let i = 0;
-        i < 12;
-        i++
-      ) {
-        const angle =
-          i * Math.PI / 6;
-        const spark =
-          document.createElement(
-            'div'
-          );
-
-        spark.className =
-          'finish-spark';
+      for (let i = 0; i < 12; i++) {
+        const angle = i * Math.PI / 6;
+        const spark = document.createElement('div');
+        spark.className = 'finish-spark';
         spark.style.setProperty(
-          '--dx',
-          Math.cos(angle) *
-            width * 1.25 +
-            'px'
+          '--dx', Math.cos(angle) * width * 1.25 + 'px'
         );
         spark.style.setProperty(
-          '--dy',
-          Math.sin(angle) *
-            height * 1.5 +
-            'px'
+          '--dy', Math.sin(angle) * height * 1.5 + 'px'
         );
-        layer.appendChild(
-          spark
-        );
+        layer.appendChild(spark);
       }
-
-      this.removeEffectAfter(
-        layer,
-        1050
-      );
+      this.removeEffectAfter(layer, 1050);
     }
 
-    chooseWrong(
-      el,
-      outOfOrder = false
-    ) {
+    chooseWrong(el, outOfOrder = false) {
       if (
         this.moving ||
         this.completed ||
         this.lockedWrong.has(el)
       ) return;
 
-      // Правильная льдина, выбранная
-      // слишком рано, остаётся на месте.
-      const effect =
-        outOfOrder
-          ? 'shake'
-          : this.config.wrongEffect;
-
-      el.classList.remove(
-        'is-wrong-shake',
-        'is-wrong-glow'
-      );
+      const effect = outOfOrder ? 'shake' : this.config.wrongEffect;
+      el.classList.remove('is-wrong-shake', 'is-wrong-glow');
       void el.offsetWidth;
 
-      if (
-        effect === 'shatter'
-      ) {
+      if (effect === 'shatter') {
         this.shatter(el);
-      } else if (
-        effect === 'shake' ||
-        effect === 'glow'
-      ) {
-        const cls =
-          effect === 'shake'
-            ? 'is-wrong-shake'
-            : 'is-wrong-glow';
-
-        el.classList.add(
-          cls
-        );
-
-        const timer =
-          setTimeout(
-            () => {
-              el.classList.remove(
-                cls
-              );
-              this.timers.delete(
-                timer
-              );
-            },
-            550
-          );
-        this.timers.add(
-          timer
-        );
+      } else if (effect === 'shake' || effect === 'glow') {
+        const cls = effect === 'shake'
+          ? 'is-wrong-shake'
+          : 'is-wrong-glow';
+        el.classList.add(cls);
+        const timer = setTimeout(() => {
+          el.classList.remove(cls);
+          this.timers.delete(timer);
+        }, 550);
+        this.timers.add(timer);
       }
 
-      this.playSound(
-        this.config.wrongSoundUrl,
-        'wrong'
-      );
-
+      this.playSound(this.config.wrongSoundUrl, 'wrong');
       if (
         !outOfOrder &&
-        (
-          this.config.lockWrong ||
-          effect === 'shatter'
-        )
+        (this.config.lockWrong || effect === 'shatter')
       ) {
         this.lockedWrong.add(el);
-        el.classList.add(
-          'is-locked'
-        );
-        el.setAttribute(
-          'aria-disabled',
-          'true'
-        );
-        if ('disabled' in el) {
-          el.disabled = true;
-        }
+        el.classList.add('is-locked');
+        el.setAttribute('aria-disabled', 'true');
+        if ('disabled' in el) el.disabled = true;
       }
-
-      this.root.dispatchEvent(
-        new CustomEvent(
-          'GAME_WRONG',
-          {
-            bubbles: true,
-            detail: {
-              element: el
-            }
-          }
-        )
-      );
+      this.root.dispatchEvent(new CustomEvent(
+        'GAME_WRONG',
+        {bubbles:true, detail:{element:el}}
+      ));
     }
 
     async chooseCorrect(el) {
-      if (
-        this.moving ||
-        this.completed ||
-        this.found.has(el)
-      ) return;
+      if (this.moving || this.completed || this.found.has(el)) return;
 
       if (
-        this.config.mode ===
-          'route' &&
-        el !==
-          this.correct[
-            this.found.size
-          ]
+        this.config.mode === 'route' &&
+        el !== this.correct[this.found.size]
       ) {
-        this.chooseWrong(
-          el,
-          true
-        );
+        this.chooseWrong(el, true);
         return;
       }
 
       this.moving = true;
+      this.clearEarlyFinishHint();
       this.found.add(el);
-      el.classList.add(
-        'is-found'
-      );
+      el.classList.add('is-found');
 
-      if (
-        this.config.correctEffect ===
-        'pop'
-      ) {
-        el.classList.add(
-          'is-correct-pop'
-        );
-        const timer =
-          setTimeout(
-            () => {
-              el.classList.remove(
-                'is-correct-pop'
-              );
-              this.timers.delete(
-                timer
-              );
-            },
-            600
-          );
-        this.timers.add(
-          timer
-        );
+      if (this.config.correctEffect === 'pop') {
+        el.classList.add('is-correct-pop');
+        const timer = setTimeout(() => {
+          el.classList.remove('is-correct-pop');
+          this.timers.delete(timer);
+        }, 600);
+        this.timers.add(timer);
       }
 
-      this.playSound(
-        this.config.correctSoundUrl,
-        'correct'
-      );
-
-      el.setAttribute(
-        'aria-disabled',
-        'true'
-      );
-      if ('disabled' in el) {
-        el.disabled = true;
-      }
-
+      this.playSound(this.config.correctSoundUrl, 'correct');
+      el.setAttribute('aria-disabled', 'true');
+      if ('disabled' in el) el.disabled = true;
       this.updateProgress();
 
-      if (
-        !await this.moveTo(el)
-      ) return;
+      if (!await this.moveTo(el)) return;
+      this.moving = false;
+      this.lastCorrect = el;
 
-      if (
-        this.found.size ===
-        this.correct.length
-      ) {
-        if (
-          this.finish &&
-          !await this.moveTo(
-            this.finish
-          )
-        ) return;
-
-        this.moving = false;
-        this.completed = true;
-
-        if (
-          this.finish &&
-          this.config.finishEffect
-        ) {
-          this.finish.classList.add(
-            'is-finished'
-          );
-          this.finishBurst();
-        }
-
-        if (
-          this.config.finishSoundEnabled
-        ) {
-          this.playSound(
-            this.config.finishSoundUrl,
-            'complete'
-          );
-        }
-
-        const detail = {
-          found: this.found.size,
-          total:
-            this.correct.length,
-          lastElement: el,
-          finishElement:
-            this.finish,
-          game: this
-        };
-
-        this.root.dispatchEvent(
-          new CustomEvent(
-            'GAME_COMPLETE',
+      if (this.found.size === this.correct.length) {
+        if (this.finish) {
+          this.finish.classList.add('is-ready');
+          this.root.dispatchEvent(new CustomEvent(
+            'GAME_READY',
             {
-              bubbles: true,
-              detail
+              bubbles:true,
+              detail:{
+                found:this.found.size,
+                total:this.correct.length
+              }
             }
-          )
-        );
-
-        this.applyCompletion(
-          detail
-        );
-
-        if (
-          typeof this.config
-            .onComplete ===
-          'function'
-        ) {
-          this.config.onComplete(
-            detail
-          );
+          ));
+        } else {
+          this.completeGame(el);
         }
-      } else {
-        this.moving = false;
+      }
+    }
+
+    showEarlyFinishHint() {
+      this.clearEarlyFinishHint();
+      const hint = document.createElement('div');
+      hint.className = 'jump-hint';
+      hint.setAttribute('role', 'status');
+      hint.textContent = this.config.earlyFinishMessage;
+      this.root.appendChild(hint);
+      this.earlyHint = hint;
+
+      this.finish.classList.remove('is-too-early');
+      void this.finish.offsetWidth;
+      this.finish.classList.add('is-too-early');
+
+      this.earlyHintTimer = setTimeout(
+        () => this.clearEarlyFinishHint(),
+        Number(this.config.earlyFinishDuration) || 2200
+      );
+    }
+
+    clearEarlyFinishHint() {
+      if (this.earlyHintTimer) clearTimeout(this.earlyHintTimer);
+      this.earlyHintTimer = null;
+      if (this.earlyHint) this.earlyHint.remove();
+      this.earlyHint = null;
+      if (this.finish) this.finish.classList.remove('is-too-early');
+    }
+
+    async chooseFinish() {
+      if (this.moving || this.completed || !this.finish) return;
+
+      if (this.found.size < this.correct.length) {
+        this.showEarlyFinishHint();
+        if (this.config.earlyFinishSound) {
+          this.playSound(this.config.wrongSoundUrl, 'wrong');
+        }
+        return;
+      }
+
+      this.clearEarlyFinishHint();
+      this.moving = true;
+      if (!await this.moveTo(this.finish)) return;
+      this.moving = false;
+      this.completeGame(this.lastCorrect);
+    }
+
+    completeGame(lastElement) {
+      if (this.completed) return;
+      this.completed = true;
+      if (this.finish) this.finish.classList.remove('is-ready');
+
+      if (this.finish && this.config.finishEffect) {
+        this.finish.classList.add('is-finished');
+        this.finishBurst();
+      }
+      if (this.config.finishSoundEnabled) {
+        this.playSound(this.config.finishSoundUrl, 'complete');
+      }
+
+      const detail = {
+        found:this.found.size,
+        total:this.correct.length,
+        lastElement,
+        finishElement:this.finish,
+        game:this
+      };
+      this.root.dispatchEvent(new CustomEvent(
+        'GAME_COMPLETE',
+        {bubbles:true, detail}
+      ));
+      this.applyCompletion(detail);
+      if (typeof this.config.onComplete === 'function') {
+        this.config.onComplete(detail);
       }
     }
 
     updateProgress() {
       const detail = {
-        found: this.found.size,
-        total:
-          this.correct.length
+        found:this.found.size,
+        total:this.correct.length
       };
-
       if (this.progress) {
         this.progress.textContent =
           `Найдено: ${detail.found}/${detail.total}`;
       }
-
-      this.root.dispatchEvent(
-        new CustomEvent(
-          'GAME_PROGRESS',
-          {
-            bubbles: true,
-            detail
-          }
-        )
-      );
+      this.root.dispatchEvent(new CustomEvent(
+        'GAME_PROGRESS',
+        {bubbles:true, detail}
+      ));
     }
 
     makeToneUrl(kind) {
-      this.toneUrls ||=
-        new Map();
-
-      if (
-        this.toneUrls.has(kind)
-      ) {
-        return this.toneUrls.get(
-          kind
-        );
-      }
+      this.toneUrls ||= new Map();
+      if (this.toneUrls.has(kind)) return this.toneUrls.get(kind);
 
       const rate = 22050;
-      const seconds =
-        kind === 'wrong'
-          ? .38
-          : .4;
-      const count =
-        Math.floor(
-          rate * seconds
-        );
+      const seconds = kind === 'wrong' ? .38 : .4;
+      const count = Math.floor(rate * seconds);
+      const wav = new ArrayBuffer(44 + count * 2);
+      const data = new DataView(wav);
 
-      const wav =
-        new ArrayBuffer(
-          44 + count * 2
-        );
-      const data =
-        new DataView(wav);
-
-      const label = (
-        offset,
-        text
-      ) => {
-        for (
-          let i = 0;
-          i < text.length;
-          i++
-        ) {
-          data.setUint8(
-            offset + i,
-            text.charCodeAt(i)
-          );
+      const label = (offset, text) => {
+        for (let i = 0; i < text.length; i++) {
+          data.setUint8(offset + i, text.charCodeAt(i));
         }
       };
 
       label(0, 'RIFF');
-      data.setUint32(
-        4,
-        36 + count * 2,
-        true
-      );
+      data.setUint32(4, 36 + count * 2, true);
       label(8, 'WAVE');
       label(12, 'fmt ');
-      data.setUint32(
-        16, 16, true
-      );
-      data.setUint16(
-        20, 1, true
-      );
-      data.setUint16(
-        22, 1, true
-      );
-      data.setUint32(
-        24, rate, true
-      );
-      data.setUint32(
-        28,
-        rate * 2,
-        true
-      );
-      data.setUint16(
-        32, 2, true
-      );
-      data.setUint16(
-        34, 16, true
-      );
+      data.setUint32(16, 16, true);
+      data.setUint16(20, 1, true);
+      data.setUint16(22, 1, true);
+      data.setUint32(24, rate, true);
+      data.setUint32(28, rate * 2, true);
+      data.setUint16(32, 2, true);
+      data.setUint16(34, 16, true);
       label(36, 'data');
-      data.setUint32(
-        40,
-        count * 2,
-        true
-      );
+      data.setUint32(40, count * 2, true);
 
-      for (
-        let i = 0;
-        i < count;
-        i++
-      ) {
+      for (let i = 0; i < count; i++) {
         const t = i / rate;
-        const fade =
-          Math.min(
-            1,
-            t / .018
-          ) *
-          Math.pow(
-            Math.max(
-              0,
-              1 - t / seconds
-            ),
-            1.25
-          );
+        const fade = Math.min(1, t / .018) *
+          Math.pow(Math.max(0, 1 - t / seconds), 1.25);
 
-        const wave =
-          kind === 'wrong'
-            ? Math.sin(
-                2 *
-                Math.PI *
-                (
-                  280 * t -
-                  85 *
-                  t *
-                  t /
-                  seconds
-                )
-              )
-            : Math.sin(
-                2 *
-                Math.PI *
-                (
-                  kind ===
-                    'complete'
-                    ? (
-                        t < .13
-                          ? 523
-                          : t < .26
-                            ? 659
-                            : 784
-                      )
-                    : (
-                        t < .18
-                          ? 587
-                          : 880
-                      )
-                ) *
-                t
-              );
+        const wave = kind === 'wrong'
+          ? Math.sin(
+              2 * Math.PI * (280 * t - 85 * t * t / seconds)
+            )
+          : Math.sin(
+              2 * Math.PI *
+              (
+                kind === 'complete'
+                  ? (t < .13 ? 523 : t < .26 ? 659 : 784)
+                  : (t < .18 ? 587 : 880)
+              ) * t
+            );
 
         data.setInt16(
           44 + i * 2,
-          Math.round(
-            wave *
-            fade *
-            12000
-          ),
+          Math.round(wave * fade * 12000),
           true
         );
       }
 
-      const audioUrl =
-        URL.createObjectURL(
-          new Blob(
-            [wav],
-            {
-              type:
-                'audio/wav'
-            }
-          )
-        );
-
-      this.toneUrls.set(
-        kind,
-        audioUrl
+      const audioUrl = URL.createObjectURL(
+        new Blob([wav], {type:'audio/wav'})
       );
+      this.toneUrls.set(kind, audioUrl);
       return audioUrl;
     }
 
-    showSoundStatus(
-      message
-    ) {
-      const status =
-        document.getElementById(
-          'sound-status'
-        );
-      if (status) {
-        status.textContent =
-          message;
-      }
+    showSoundStatus(message) {
+      const status = document.getElementById('sound-status');
+      if (status) status.textContent = message;
     }
 
-    playSound(
-      url,
-      kind = 'correct',
-      diagnostic = false
-    ) {
-      if (
-        !this.config.soundEnabled
-      ) {
+    playSound(url, kind = 'correct', diagnostic = false) {
+      if (!this.config.soundEnabled) {
         if (diagnostic) {
-          this.showSoundStatus(
-            'Звук выключен в настройках игры.'
-          );
+          this.showSoundStatus('Звук выключен в настройках игры.');
         }
         return;
       }
 
       try {
-        const audio =
-          new Audio(
-            url ||
-            this.makeToneUrl(
-              kind
-            )
-          );
+        const audio = new Audio(url || this.makeToneUrl(kind));
         audio.volume = 1;
-        const playback =
-          audio.play();
+        const playback = audio.play();
 
-        if (
-          playback &&
-          typeof playback.then ===
-            'function'
-        ) {
-          playback.then(
-            () => {
-              if (diagnostic) {
-                this.showSoundStatus(
-                  'Звук запущен. Если его не слышно, проверь громкость и звук вкладки.'
-                );
-              }
-            }
-          ).catch(
-            () => {
+        if (playback && typeof playback.then === 'function') {
+          playback.then(() => {
+            if (diagnostic) {
               this.showSoundStatus(
-                'Браузер заблокировал звук. Открой HTML в отдельной вкладке и нажми 🔊.'
+                'Звук запущен. Если его не слышно, проверь громкость и звук вкладки.'
               );
             }
-          );
+          }).catch(() => {
+            this.showSoundStatus(
+              'Браузер заблокировал звук. Открой HTML в отдельной вкладке и нажми 🔊.'
+            );
+          });
         }
       } catch (e) {
         this.showSoundStatus(
@@ -1241,102 +745,54 @@
       }
     }
 
-    applyCompletion(
-      detail
-    ) {
-      const c =
-        this.config.completion;
-
+    applyCompletion(detail) {
+      const c = this.config.completion;
       switch (c.action) {
         case 'message': {
-          const node =
-            document.createElement(
-              'div'
-            );
-          node.className =
-            'jump-message';
-          node.setAttribute(
-            'role',
-            'status'
-          );
-          node.textContent =
-            c.message || '';
-          this.root.appendChild(
-            node
-          );
-          this.cleanupCompletion =
-            () => node.remove();
+          const node = document.createElement('div');
+          node.className = 'jump-message';
+          node.setAttribute('role', 'status');
+          node.textContent = c.message || '';
+          this.root.appendChild(node);
+          this.cleanupCompletion = () => node.remove();
           break;
         }
 
         case 'reveal': {
-          const node =
-            this.mustFind(
-              c.targetSelector
-            );
-          const hidden =
-            node.hidden;
+          const node = this.mustFind(c.targetSelector);
+          const hidden = node.hidden;
           node.hidden = false;
-          this.cleanupCompletion =
-            () => {
-              node.hidden =
-                hidden;
-            };
+          this.cleanupCompletion = () => {
+            node.hidden = hidden;
+          };
           break;
         }
 
         case 'animation':
         case 'addClass': {
-          const node =
-            this.mustFind(
-              c.targetSelector
-            );
-          const cls =
-            c.className ||
-            'is-finished';
-          const already =
-            node.classList.contains(
-              cls
-            );
-          node.classList.add(
-            cls
-          );
-          this.cleanupCompletion =
-            () => {
-              if (!already) {
-                node.classList.remove(
-                  cls
-                );
-              }
-            };
+          const node = this.mustFind(c.targetSelector);
+          const cls = c.className || 'is-finished';
+          const already = node.classList.contains(cls);
+          node.classList.add(cls);
+          this.cleanupCompletion = () => {
+            if (!already) node.classList.remove(cls);
+          };
           break;
         }
 
         case 'sound':
-          this.playSound(
-            c.soundUrl,
-            'complete'
-          );
+          this.playSound(c.soundUrl, 'complete');
           break;
 
         case 'openUrl':
           if (c.url) {
-            window.open(
-              c.url,
-              '_blank',
-              'noopener,noreferrer'
-            );
+            window.open(c.url, '_blank', 'noopener,noreferrer');
           }
           break;
 
         case 'nextSlide':
         case 'custom':
-          if (
-            typeof c.run ===
-            'function'
-          ) {
-            c.run(detail);
-          }
+          if (typeof c.run === 'function') c.run(detail);
           break;
 
         case 'none':
@@ -1351,334 +807,173 @@
     }
 
     reset() {
-      cancelAnimationFrame(
-        this.frame
-      );
-
-      if (
-        this.activeMoveResolve
-      ) {
-        this.activeMoveResolve(
-          false
-        );
-        this.activeMoveResolve =
-          null;
+      cancelAnimationFrame(this.frame);
+      if (this.activeMoveResolve) {
+        this.activeMoveResolve(false);
+        this.activeMoveResolve = null;
       }
+      this.clearEarlyFinishHint();
 
       this.frame = null;
       this.moving = false;
       this.completed = false;
 
       if (this.timers) {
-        for (
-          const timer of
-          this.timers
-        ) {
-          clearTimeout(
-            timer
-          );
-        }
+        for (const timer of this.timers) clearTimeout(timer);
       }
-      this.timers =
-        new Set();
+      this.timers = new Set();
 
-      if (
-        this.effectNodes
-      ) {
-        for (
-          const node of
-          this.effectNodes
-        ) {
-          node.remove();
-        }
+      if (this.effectNodes) {
+        for (const node of this.effectNodes) node.remove();
       }
-      this.effectNodes =
-        new Set();
+      this.effectNodes = new Set();
 
-      if (
-        this.cleanupCompletion
-      ) {
+      if (this.cleanupCompletion) {
         this.cleanupCompletion();
-        this.cleanupCompletion =
-          null;
+        this.cleanupCompletion = null;
       }
 
-      if (this.found) {
-        this.found.clear();
-      } else {
-        this.found =
-          new Set();
-      }
-      this.lockedWrong =
-        new Set();
+      if (this.found) this.found.clear();
+      else this.found = new Set();
+      this.lockedWrong = new Set();
 
-      for (
-        const el of [
-          ...this.correct,
-          ...this.wrong
-        ]
-      ) {
+      for (const el of [...this.correct, ...this.wrong]) {
         el.classList.remove(
-          'is-found',
-          'is-locked',
-          'is-correct-pop',
-          'is-wrong-shake',
-          'is-wrong-glow',
-          'is-wrong-shatter',
-          'is-wrong-gone'
+          'is-found', 'is-locked', 'is-correct-pop',
+          'is-wrong-shake', 'is-wrong-glow',
+          'is-wrong-shatter', 'is-wrong-gone'
         );
-
-        const old =
-          this.originalAria.get(
-            el
-          );
-        if (
-          old === null
-        ) {
-          el.removeAttribute(
-            'aria-disabled'
-          );
-        } else {
-          el.setAttribute(
-            'aria-disabled',
-            old
-          );
-        }
-
-        if (
-          'disabled' in el
-        ) {
-          el.disabled =
-            this.originalDisabled.get(
-              el
-            );
+        const old = this.originalAria.get(el);
+        if (old === null) el.removeAttribute('aria-disabled');
+        else el.setAttribute('aria-disabled', old);
+        if ('disabled' in el) {
+          el.disabled = this.originalDisabled.get(el);
         }
       }
 
-      if (
-        this.finish
-      ) {
+      if (this.finish) {
         this.finish.classList.remove(
-          'is-finished'
+          'is-finished', 'is-ready', 'is-too-early'
         );
       }
-
-      this.currentTarget =
-        this.start;
+      this.lastCorrect = null;
+      this.currentTarget = this.start;
       this.reposition();
       this.updateProgress();
 
-      if (
-        typeof this.config
-          .onReset ===
-        'function'
-      ) {
+      if (typeof this.config.onReset === 'function') {
         this.config.onReset();
       }
     }
 
     setMode(mode) {
-      if (
-        ![
-          'free',
-          'route'
-        ].includes(mode)
-      ) {
-        throw new Error(
-          'Прыжки: неизвестный режим'
-        );
+      if (!['free', 'route'].includes(mode)) {
+        throw new Error('Прыжки: неизвестный режим');
       }
-      this.config.mode =
-        mode;
+      this.config.mode = mode;
       this.reset();
     }
 
     destroy() {
       this.reset();
       this.destroyed = true;
-
-      this.root.removeEventListener(
-        'click',
-        this.boundClick
-      );
-      window.removeEventListener(
-        'resize',
-        this.boundResize
-      );
-
-      if (
-        this.observer
-      ) {
-        this.observer.disconnect();
-      }
+      this.root.removeEventListener('click', this.boundClick);
+      window.removeEventListener('resize', this.boundResize);
+      if (this.observer) this.observer.disconnect();
 
       if (
         this.originalSibling &&
-        this.originalSibling
-          .parentNode ===
-          this.originalParent
+        this.originalSibling.parentNode === this.originalParent
       ) {
         this.originalParent.insertBefore(
-          this.character,
-          this.originalSibling
+          this.character, this.originalSibling
         );
       } else {
-        this.originalParent.appendChild(
-          this.character
-        );
+        this.originalParent.appendChild(this.character);
       }
 
-      if (
-        this.originalCharacterStyle ===
-        null
-      ) {
-        this.character.removeAttribute(
-          'style'
-        );
+      if (this.originalCharacterStyle === null) {
+        this.character.removeAttribute('style');
       } else {
         this.character.setAttribute(
-          'style',
-          this.originalCharacterStyle
+          'style', this.originalCharacterStyle
         );
       }
-
-      this.root.style.position =
-        this.originalRootPosition;
+      this.root.style.position = this.originalRootPosition;
       this.overlay.remove();
 
       if (this.toneUrls) {
-        for (
-          const url of
-          this.toneUrls.values()
-        ) {
-          URL.revokeObjectURL(
-            url
-          );
+        for (const url of this.toneUrls.values()) {
+          URL.revokeObjectURL(url);
         }
       }
     }
   }
 
-  window.JumpGame =
-    JumpGame;
+  window.JumpGame = JumpGame;
 })();
 
 const CONFIG = {
-  rootSelector:
-    '#game-board',
-  characterSelector:
-    '#hero',
-  startSelector:
-    '#start',
+  rootSelector: '#game-board',
+  characterSelector: '#hero',
+  startSelector: '#start',
   correctAnswers: [
-    '#answer-1',
-    '#answer-2',
-    '#answer-3',
-    '#answer-4'
+    '#answer-1', '#answer-2', '#answer-3', '#answer-4'
   ],
   wrongAnswers: [
-    '#wrong-1',
-    '#wrong-2',
-    '#wrong-3'
+    '#wrong-1', '#wrong-2', '#wrong-3'
   ],
-  finishSelector:
-    '#finish',
-  progressSelector:
-    '#progress',
+  finishSelector: '#finish',
+  progressSelector: null,
   mode: 'free',
   movement: 'jump',
-  jumpHeight:
-    'medium',
+  jumpHeight: 'medium',
   duration: 690,
   landing: 'above',
   gap: 3,
   offsetX: 0,
   offsetY: 0,
-  correctEffect:
-    'pop',
-  wrongEffect:
-    'shatter',
+  correctEffect: 'pop',
+  wrongEffect: 'shatter',
   lockWrong: true,
-  soundEnabled:
-    true,
-  correctSoundUrl:
-    null,
-  wrongSoundUrl:
-    null,
-  finishEffect:
-    true,
-  finishSoundEnabled:
-    true,
-  finishSoundUrl:
-    null,
+  soundEnabled: true,
+  correctSoundUrl: null,
+  wrongSoundUrl: null,
+  finishEffect: true,
+  finishSoundEnabled: true,
+  finishSoundUrl: null,
+  earlyFinishMessage: 'Подумай ещё',
+  earlyFinishDuration: 2200,
+  earlyFinishSound: true,
   completion: {
-    action:
-      'message',
-    message:
-      'Отлично! Все льдины найдены 🎉'
+    action: 'message',
+    message: 'Отлично! Все льдины найдены 🎉'
   }
 };
 
-const game =
-  new JumpGame(CONFIG);
-window.jumpGame =
-  game;
+const game = new JumpGame(CONFIG);
+window.jumpGame = game;
 
-document.getElementById(
-  'reset-game'
-).addEventListener(
-  'click',
-  () => game.reset()
+document.getElementById('reset-game').addEventListener(
+  'click', () => game.reset()
+);
+document.getElementById('test-sound').addEventListener(
+  'click', () => game.playSound(null, 'correct', true)
 );
 
-document.getElementById(
-  'test-sound'
-).addEventListener(
-  'click',
-  () => game.playSound(
-    null,
-    'correct',
-    true
-  )
-);
-
-for (
-  const mode of [
-    'free',
-    'route'
-  ]
-) {
-  document.getElementById(
-    mode + '-mode'
-  ).addEventListener(
+for (const mode of ['free', 'route']) {
+  document.getElementById(mode + '-mode').addEventListener(
     'click',
     () => {
-      game.setMode(
-        mode
+      game.setMode(mode);
+      document.getElementById('free-mode').setAttribute(
+        'aria-pressed', String(mode === 'free')
       );
-      document.getElementById(
-        'free-mode'
-      ).setAttribute(
-        'aria-pressed',
-        String(
-          mode ===
-            'free'
-        )
+      document.getElementById('route-mode').setAttribute(
+        'aria-pressed', String(mode === 'route')
       );
-      document.getElementById(
-        'route-mode'
-      ).setAttribute(
-        'aria-pressed',
-        String(
-          mode ===
-            'route'
-        )
-      );
-      document.getElementById(
-        'mode-hint'
-      ).textContent =
-        mode ===
-        'free'
+      document.getElementById('mode-hint').textContent =
+        mode === 'free'
           ? 'Нажми на все числа, кратные 6. Порядок любой.'
           : 'Прыгай по маршруту: 12 → 18 → 24 → 30.';
     }
