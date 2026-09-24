@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Прыжки — рабочая версия игры</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #17314d; background: #eaf5fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px; }
+    .shell { max-width: 1060px; margin: 0 auto; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    h1 { font-size: clamp(22px, 3vw, 34px); margin: 0; }
+    .hint { margin: 5px 0 0; color: #526b7c; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .controls button { border: 1px solid #9dbdcf; background: white; color: #17314d; padding: 9px 13px; border-radius: 12px; font: inherit; cursor: pointer; }
+    .controls button[aria-pressed="true"] { background: #1c608e; color: white; border-color: #1c608e; }
+    .controls button:focus-visible, .answer:focus-visible { outline: 3px solid #e79c2f; outline-offset: 3px; }
+    .board { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 22px; isolation: isolate; background: linear-gradient(#c8eafa 0%, #e9f9ff 61%, #83c2dd 62%, #559fca 100%); box-shadow: 0 15px 50px #37749b32; }
+    .board::before { content: ""; position: absolute; inset: 7% 0 auto; height: 32%; background: radial-gradient(ellipse at 20% 80%, #fff9 0 8%, transparent 8.5%), radial-gradient(ellipse at 80% 10%, #fff9 0 10%, transparent 10.5%); opacity: .65; pointer-events: none; }
+    .instruction { position: absolute; left: 4%; top: 4%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 16px; font-size: clamp(12px, 2.2vw, 24px); font-weight: 720; }
+    .count { position: absolute; right: 4%; top: 5%; z-index: 2; padding: 1% 2%; background: #ffffffdb; border-radius: 14px; font-size: clamp(11px, 1.65vw, 18px); }
+    .answer, .start, .finish { position: absolute; width: 12%; height: 15%; border-radius: 50% 50% 35% 35%; border: 0; background: #efffff; box-shadow: 0 7px 0 #a8d8e6, 0 12px 17px #194a7550; display: grid; place-items: center; font-size: clamp(15px, 3.2vw, 38px); font-weight: 800; color: #17466c; }
+    .answer { cursor: pointer; touch-action: manipulation; }
+    .answer:hover:not(.is-found):not(.is-locked) { background: #fff8d6; }
+    .answer.is-found { background: #c9f5e1; color: #22634d; cursor: default; }
+    .answer.is-locked { opacity: .55; cursor: default; }
+    .start, .finish { pointer-events: none; }
+    .start { left: 5%; top: 69%; width: 13%; }
+    .finish { left: 82%; top: 67%; width: 14%; font-size: clamp(20px, 3.6vw, 45px); }
+    .finish.is-finished { animation: finish-pulse .75s ease-in-out 3; }
+    @keyframes finish-pulse { 50% { filter: drop-shadow(0 0 20px #f9bd22); transform: scale(1.12); } }
+    #answer-1 { left: 24%; top: 54%; }
+    #answer-2 { left: 46%; top: 73%; }
+    #answer-3 { left: 64%; top: 43%; }
+    #answer-4 { left: 78%; top: 31%; }
+    #wrong-1 { left: 31%; top: 28%; }
+    #wrong-2 { left: 52%; top: 23%; }
+    #wrong-3 { left: 66%; top: 72%; }
+    .jump-overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+    .character { position: absolute; left: 0; top: 0; width: 8%; height: 15%; display: grid; place-items: center; font-size: clamp(28px, 5vw, 65px); line-height: 1; will-change: transform; filter: drop-shadow(2px 5px 3px #17466c50); }
+    .jump-message { position: absolute; left: 50%; top: 48%; z-index: 10; transform: translate(-50%, -50%); background: #fffdf1; padding: 2.5% 5%; border-radius: 20px; box-shadow: 0 10px 35px #234a6870; text-align: center; font-size: clamp(18px, 3vw, 34px); font-weight: 800; pointer-events: none; max-width: 80%; }
+    .is-wrong-shake { animation: wrong-shake .35s ease-in-out; }
+    .is-wrong-glow { animation: wrong-glow .5s ease-out; }
+    @keyframes wrong-shake { 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+    @keyframes wrong-glow { 40% { box-shadow: 0 0 0 8px #f28b8899, 0 7px 0 #a8d8e6; } }
+    .note { font-size: 14px; color: #526b7c; margin-top: 14px; line-height: 1.5; }
+    @media (max-width: 600px) { body { padding: 9px; } .board { border-radius: 12px; } .instruction { max-width: 66%; } .answer, .start, .finish { height: 18%; } .character { height: 18%; } }
+  </style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <div><h1>Прыжки 🐧</h1><p class="hint" id="mode-hint">Нажми на все числа, кратные 6. Порядок любой.</p></div>
+    <div class="controls">
+      <button id="free-mode" type="button" aria-pressed="true">Свободный выбор</button>
+      <button id="route-mode" type="button" aria-pressed="false">Маршрут</button>
+      <button id="reset-game" type="button">↺ Начать заново</button>
+    </div>
+  </div>
+  <section id="game-board" class="board" aria-label="Игра: прыжки по ответам">
+    <div class="instruction" id="instruction">Найди числа, кратные 6</div>
+    <div class="count" id="progress" aria-live="polite">Найдено: 0/4</div>
+    <div id="start" class="start" aria-label="Старт">Старт</div>
+    <button id="answer-1" class="answer" type="button">12</button>
+    <button id="answer-2" class="answer" type="button">18</button>
+    <button id="answer-3" class="answer" type="button">24</button>
+    <button id="answer-4" class="answer" type="button">30</button>
+    <button id="wrong-1" class="answer" type="button">14</button>
+    <button id="wrong-2" class="answer" type="button">25</button>
+    <button id="wrong-3" class="answer" type="button">32</button>
+    <div id="finish" class="finish" aria-label="Финиш">🎁</div>
+    <div id="hero" class="character" aria-label="Пингвин">🐧</div>
+  </section>
+  <p class="note">В режиме «Маршрут» нажимай 12 → 18 → 24 → 30. Во время прыжка выбор временно отключён. Демонстрация работает без сервера и внешних библиотек.</p>
+</main>
+<script>
+/* Прыжки, v0.1. Вся будущая панель редактора сможет записывать объект CONFIG ниже.
+   Селекторы относятся к ЭТОМУ же документу и к rootSelector, не к соседнему iframe. */
+(function () {
+  'use strict';
+  const DEFAULTS = {
+    mode: 'free',                         // 'free' | 'route'
+    rootSelector: '#game-board',
+    characterSelector: '#hero',
+    startSelector: '#start',
+    startLanding: 'above',
+    correctAnswers: [],                   // порядок массива задаёт маршрут
+    wrongAnswers: [],
+    finishSelector: null,                 // финиш необязателен
+    landing: 'above',                    // 'center' | 'above' | 'below' | 'left' | 'right'
+    offsetX: 0, offsetY: 0, startOffsetX: 0, startOffsetY: 0,
+    movement: 'jump',                    // 'jump' | 'linear' | 'flight'
+    jumpHeight: 'medium',                // 'low' | 'medium' | 'high' или число (px)
+    duration: 690,                       // миллисекунды, обычно 500–900
+    gap: 3,                              // зазор между персонажем и объектом, px
+    wrongEffect: 'shake',                // 'shake' | 'glow' | 'none'
+    lockWrong: false,
+    wrongSoundUrl: null,
+    finishEffect: true,
+    progressSelector: null,
+    completion: { action: 'none' },
+    onComplete: null,
+    onReset: null
+  };
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+  class JumpGame {
+    constructor(options) {
+      this.config = Object.assign({}, DEFAULTS, options);
+      this.config.completion = Object.assign({}, DEFAULTS.completion, options.completion || {});
+      this.root = document.querySelector(this.config.rootSelector);
+      if (!this.root) throw new Error('Прыжки: игровой контейнер не найден: ' + this.config.rootSelector);
+      this.query = (selector) => {
+        if (!selector) return null;
+        let el = null;
+        try { el = this.root.querySelector(selector); } catch (e) { /* ID без # */ }
+        if (!el && /^[A-Za-z][\w:-]*$/.test(selector)) el = Array.from(this.root.querySelectorAll('[id]')).find(e => e.id === selector) || null;
+        return el;
+      };
+      this.character = this.query(this.config.characterSelector);
+      this.start = this.query(this.config.startSelector);
+      if (!this.character || !this.start) throw new Error('Прыжки: не найден персонаж или стартовая точка');
+      this.correct = this.config.correctAnswers.map(s => this.mustFind(s));
+      this.wrong = this.config.wrongAnswers.map(s => this.mustFind(s));
+      if (!this.correct.length || new Set([...this.correct, ...this.wrong]).size !== this.correct.length + this.wrong.length)
+        throw new Error('Прыжки: нужны правильные ответы без повторов и пересечений');
+      this.finish = this.config.finishSelector ? this.mustFind(this.config.finishSelector) : null;
+      this.progress = this.query(this.config.progressSelector);
+      this.originalCharacterStyle = this.character.getAttribute('style');
+      this.originalParent = this.character.parentNode;
+      this.originalSibling = this.character.nextSibling;
+      this.originalRootPosition = this.root.style.position;
+      if (getComputedStyle(this.root).position === 'static') this.root.style.position = 'relative';
+      this.overlay = document.createElement('div');
+      this.overlay.className = 'jump-overlay';
+      this.root.appendChild(this.overlay);
+      this.overlay.appendChild(this.character);
+      Object.assign(this.character.style, {position:'absolute', left:'0', top:'0', margin:'0'});
+      this.originalAria = new Map([...this.correct, ...this.wrong].map(el => [el, el.getAttribute('aria-disabled')]));
+      this.originalDisabled = new Map([...this.correct, ...this.wrong].map(el => [el, 'disabled' in el ? el.disabled : null]));
+      this.boundClick = (event) => {
+        let target = event.target;
+        while (target && target !== this.root && !this.correct.includes(target) && !this.wrong.includes(target)) target = target.parentElement;
+        if (this.correct.includes(target)) this.chooseCorrect(target);
+        else if (this.wrong.includes(target)) this.chooseWrong(target);
+      };
+      this.boundResize = () => { if (!this.moving) this.reposition(); };
+      this.root.addEventListener('click', this.boundClick);
+      window.addEventListener('resize', this.boundResize);
+      if (typeof ResizeObserver !== 'undefined') {
+        this.observer = new ResizeObserver(this.boundResize);
+        this.observer.observe(this.root);
+      }
+      this.reset();
+    }
+
+    mustFind(selector) {
+      const el = this.query(selector);
+      if (!el) throw new Error('Прыжки: объект не найден: ' + selector);
+      return el;
+    }
+
+    // Переводим координаты браузера в координаты игрового контейнера.
+    rectWithinRoot(el) {
+      const r = el.getBoundingClientRect(), base = this.root.getBoundingClientRect();
+      const sx = this.root.clientWidth / base.width, sy = this.root.clientHeight / base.height;
+      if (!Number.isFinite(sx) || !Number.isFinite(sy)) throw new Error('Прыжки: контейнер не имеет размера');
+      return { x: (r.left - base.left) * sx, y: (r.top - base.top) * sy, w: r.width * sx, h: r.height * sy };
+    }
+
+    landingPoint(el, landing = this.config.landing, start = false) {
+      const t = this.rectWithinRoot(el), c = this.rectWithinRoot(this.character);
+      const gap = Number(this.config.gap) || 0;
+      let x = t.x + (t.w - c.w) / 2, y = t.y + (t.h - c.h) / 2;
+      if (landing === 'above') y = t.y - c.h - gap;
+      if (landing === 'below') y = t.y + t.h + gap;
+      if (landing === 'left') x = t.x - c.w - gap;
+      if (landing === 'right') x = t.x + t.w + gap;
+      x += Number(start ? this.config.startOffsetX : this.config.offsetX) || 0;
+      y += Number(start ? this.config.startOffsetY : this.config.offsetY) || 0;
+      return {x, y};
+    }
+
+    paint(p) {
+      this.position = p;
+      this.character.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
+    }
+
+    reposition() {
+      if (this.destroyed || !this.root.clientWidth) return;
+      const target = this.currentTarget || this.start;
+      this.paint(this.landingPoint(target, target === this.start ? this.config.startLanding : this.config.landing, target === this.start));
+    }
+
+    heightFor(distance) {
+      const h = this.config.jumpHeight;
+      if (Number.isFinite(Number(h))) return Math.max(0, Number(h));
+      return clamp(distance * .23, 17, Math.min(105, this.root.clientHeight * .24)) * ({low:.6, medium:1, high:1.5}[h] || 1);
+    }
+
+    moveTo(el) {
+      this.moving = true;
+      const from = {...this.position}, startTime = performance.now();
+      const duration = Math.max(0, Number(this.config.duration) || 0);
+      const mode = this.config.movement;
+      return new Promise(resolve => {
+        this.activeMoveResolve = resolve;
+        const tick = (now) => {
+          if (!this.moving || this.destroyed) { this.activeMoveResolve = null; resolve(false); return; }
+          const t = duration ? clamp((now - startTime) / duration, 0, 1) : 1;
+          const ease = (1 - Math.cos(Math.PI * t)) / 2;
+          const to = this.landingPoint(el);
+          const d = Math.hypot(to.x - from.x, to.y - from.y);
+          const lift = mode === 'jump' ? Math.sin(Math.PI * t) * this.heightFor(d) :
+            mode === 'flight' ? Math.sin(Math.PI * t) * Math.min(22, d * .07) : 0;
+          this.paint({x: from.x + (to.x - from.x) * ease, y: from.y + (to.y - from.y) * ease - lift});
+          if (t < 1) this.frame = requestAnimationFrame(tick);
+          else { this.frame = null; this.activeMoveResolve = null; this.currentTarget = el; resolve(true); }
+        };
+        this.frame = requestAnimationFrame(tick);
+      });
+    }
+
+    chooseWrong(el) {
+      if (this.moving || this.completed || this.lockedWrong.has(el)) return;
+      const effect = this.config.wrongEffect;
+      el.classList.remove('is-wrong-shake', 'is-wrong-glow');
+      void el.offsetWidth;
+      if (effect === 'shake' || effect === 'glow') {
+        const cls = effect === 'shake' ? 'is-wrong-shake' : 'is-wrong-glow';
+        el.classList.add(cls);
+        const timer = setTimeout(() => { el.classList.remove(cls); this.timers.delete(timer); }, 550);
+        this.timers.add(timer);
+      }
+      this.playSound(this.config.wrongSoundUrl);
+      if (this.config.lockWrong) {
+        this.lockedWrong.add(el);
+        el.classList.add('is-locked');
+        el.setAttribute('aria-disabled', 'true');
+        if ('disabled' in el) el.disabled = true;
+      }
+      this.root.dispatchEvent(new CustomEvent('GAME_WRONG', {bubbles:true, detail:{element:el}}));
+    }
+
+    async chooseCorrect(el) {
+      if (this.moving || this.completed || this.found.has(el)) return;
+      if (this.config.mode === 'route' && el !== this.correct[this.found.size]) {
+        this.chooseWrong(el);
+        return;
+      }
+      this.moving = true;
+      this.found.add(el);
+      el.classList.add('is-found');
+      el.setAttribute('aria-disabled', 'true');
+      if ('disabled' in el) el.disabled = true;
+      this.updateProgress();
+      if (!await this.moveTo(el)) return;
+      if (this.found.size === this.correct.length) {
+        if (this.finish && !await this.moveTo(this.finish)) return;
+        this.moving = false;
+        this.completed = true;
+        if (this.finish && this.config.finishEffect) this.finish.classList.add('is-finished');
+        const detail = {found:this.found.size, total:this.correct.length, lastElement:el, finishElement:this.finish, game:this};
+        this.root.dispatchEvent(new CustomEvent('GAME_COMPLETE', {bubbles:true, detail}));
+        this.applyCompletion(detail);
+        if (typeof this.config.onComplete === 'function') this.config.onComplete(detail);
+      } else this.moving = false;
+    }
+
+    updateProgress() {
+      const detail = {found:this.found.size, total:this.correct.length};
+      if (this.progress) this.progress.textContent = `Найдено: ${detail.found}/${detail.total}`;
+      this.root.dispatchEvent(new CustomEvent('GAME_PROGRESS', {bubbles:true, detail}));
+    }
+
+    playSound(url) {
+      if (!url) return;
+      try { const audio = new Audio(url); audio.play().catch(() => {}); } catch (e) { /* браузер запретил звук */ }
+    }
+
+    applyCompletion(detail) {
+      const c = this.config.completion;
+      switch (c.action) {
+        case 'message': {
+          const node = document.createElement('div');
+          node.className = 'jump-message';
+          node.setAttribute('role', 'status');
+          node.textContent = c.message || '';
+          this.root.appendChild(node);
+          this.cleanupCompletion = () => node.remove();
+          break;
+        }
+        case 'reveal': {
+          const node = this.mustFind(c.targetSelector), hidden = node.hidden;
+          node.hidden = false;
+          this.cleanupCompletion = () => { node.hidden = hidden; };
+          break;
+        }
+        case 'animation':
+        case 'addClass': {
+          const node = this.mustFind(c.targetSelector), cls = c.className || 'is-finished';
+          const already = node.classList.contains(cls);
+          node.classList.add(cls);
+          this.cleanupCompletion = () => { if (!already) node.classList.remove(cls); };
+          break;
+        }
+        case 'sound': this.playSound(c.soundUrl); break;
+        case 'openUrl': if (c.url) window.open(c.url, '_blank', 'noopener,noreferrer'); break;
+        case 'nextSlide':
+        case 'custom': if (typeof c.run === 'function') c.run(detail); break;
+        case 'none': break;
+        default: throw new Error('Прыжки: неизвестное действие завершения: ' + c.action);
+      }
+    }
+
+    reset() {
+      cancelAnimationFrame(this.frame);
+      if (this.activeMoveResolve) { this.activeMoveResolve(false); this.activeMoveResolve = null; }
+      this.frame = null;
+      this.moving = false;
+      this.completed = false;
+      if (this.timers) for (const timer of this.timers) clearTimeout(timer);
+      this.timers = new Set();
+      if (this.cleanupCompletion) { this.cleanupCompletion(); this.cleanupCompletion = null; }
+      if (this.found) this.found.clear(); else this.found = new Set();
+      this.lockedWrong = new Set();
+      for (const el of [...this.correct, ...this.wrong]) {
+        el.classList.remove('is-found', 'is-locked', 'is-wrong-shake', 'is-wrong-glow');
+        const old = this.originalAria.get(el);
+        if (old === null) el.removeAttribute('aria-disabled'); else el.setAttribute('aria-disabled', old);
+        if ('disabled' in el) el.disabled = this.originalDisabled.get(el);
+      }
+      if (this.finish) this.finish.classList.remove('is-finished');
+      this.currentTarget = this.start;
+      this.reposition();
+      this.updateProgress();
+      if (typeof this.config.onReset === 'function') this.config.onReset();
+    }
+
+    setMode(mode) {
+      if (!['free', 'route'].includes(mode)) throw new Error('Прыжки: неизвестный режим');
+      this.config.mode = mode;
+      this.reset();
+    }
+
+    destroy() {
+      this.reset();
+      this.destroyed = true;
+      this.root.removeEventListener('click', this.boundClick);
+      window.removeEventListener('resize', this.boundResize);
+      if (this.observer) this.observer.disconnect();
+      if (this.originalSibling && this.originalSibling.parentNode === this.originalParent)
+        this.originalParent.insertBefore(this.character, this.originalSibling);
+      else this.originalParent.appendChild(this.character);
+      if (this.originalCharacterStyle === null) this.character.removeAttribute('style');
+      else this.character.setAttribute('style', this.originalCharacterStyle);
+      this.root.style.position = this.originalRootPosition;
+      this.overlay.remove();
+    }
+  }
+  window.JumpGame = JumpGame;
+})();
+
+// Данные демонстрации. Редактору достаточно будет сформировать такой объект.
+const CONFIG = {
+  rootSelector: '#game-board',
+  characterSelector: '#hero', startSelector: '#start',
+  correctAnswers: ['#answer-1', '#answer-2', '#answer-3', '#answer-4'],
+  wrongAnswers: ['#wrong-1', '#wrong-2', '#wrong-3'],
+  finishSelector: '#finish', progressSelector: '#progress',
+  mode: 'free', movement: 'jump', jumpHeight: 'medium', duration: 690,
+  landing: 'above', gap: 3, offsetX: 0, offsetY: 0,
+  wrongEffect: 'shake', lockWrong: false, wrongSoundUrl: null,
+  completion: { action: 'message', message: 'Отлично! Все льдины найдены 🎉' }
+};
+const game = new JumpGame(CONFIG);
+window.jumpGame = game; // game.reset(), game.setMode('route'), game.destroy()
+document.getElementById('reset-game').addEventListener('click', () => game.reset());
+for (const mode of ['free', 'route']) {
+  document.getElementById(mode + '-mode').addEventListener('click', () => {
+    game.setMode(mode);
+    document.getElementById('free-mode').setAttribute('aria-pressed', String(mode === 'free'));
+    document.getElementById('route-mode').setAttribute('aria-pressed', String(mode === 'route'));
+    document.getElementById('mode-hint').textContent = mode === 'free' ?
+      'Нажми на все числа, кратные 6. Порядок любой.' : 'Прыгай по маршруту: 12 → 18 → 24 → 30.';
+  });
+}
+</script>
+</body>
+</html>
